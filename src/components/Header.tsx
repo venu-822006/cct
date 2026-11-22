@@ -96,8 +96,7 @@ export function Header({
             <select value={theme} onChange={(event) => onThemeChange(event.target.value as Theme)}>
               {THEMES.map((option) => (
                 <option key={option} value={option}>
-                  {option.charAt(0).toUpperCase()}
-                  {option.slice(1)}
+                  {option === "gdrive-light" ? "Light" : "Dark"}
                 </option>
               ))}
             </select>

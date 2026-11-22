@@ -84,17 +84,7 @@ export type SortMode =
   | "size-asc"
   | "type-asc"
   | "type-desc";
-export type Theme =
-  | "gdrive-light"
-  | "gdrive-dark"
-  | "indigo"
-  | "emerald"
-  | "ocean"
-  | "sunset"
-  | "nordic"
-  | "dawn"
-  | "coast"
-  | "slate";
+export type Theme = "gdrive-light" | "gdrive-dark";
 export type ViewMode = "list" | "grid";
 
 export type Breadcrumb = {

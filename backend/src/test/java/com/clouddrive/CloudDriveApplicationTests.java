@@ -215,4 +215,50 @@ class CloudDriveApplicationTests {
         assertNotNull(breakdown);
         assertTrue(breakdown.getTotalUsedBytes() > 0);
     }
+
+    @Test
+    void testPublicShareLinkForFileAndFolder() throws Exception {
+        String u = "pubshare_" + uid();
+        RegisterRequest req = new RegisterRequest();
+        req.setUsername(u);
+        req.setEmail(u + "@test.com");
+        req.setPassword("pass1234");
+        authService.register(req);
+        User user = authService.getUserByUsername(u);
+
+        // 1. Create Folder and files
+        FileItemDTO folder = fileStorageService.createFolder(user, "/", "SharedFolder");
+        fileStorageService.createBlankFile(user, "/SharedFolder", "readme.txt", "Public documentation content");
+
+        // 2. Create Public Share for Folder
+        ShareRequest folderShareReq = new ShareRequest();
+        folderShareReq.setFileId(folder.getId());
+        folderShareReq.setExpiresInHours(48);
+        ShareResponseDTO folderShare = shareService.createShareLink(user, folderShareReq);
+        assertNotNull(folderShare.getToken());
+        assertEquals("SharedFolder.zip", folderShare.getFileName());
+        assertEquals("application/zip", folderShare.getContentType());
+
+        // 3. Test getShareInfo for folder
+        ShareResponseDTO info = shareService.getShareInfo(folderShare.getToken());
+        assertEquals(folderShare.getToken(), info.getToken());
+        assertFalse(info.isExpired());
+
+        // 4. Test zip streaming for public folder share
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        shareService.streamSharedFolderZip(folderShare.getToken(), baos);
+        assertTrue(baos.size() > 50);
+
+        // 5. Create Public Share for File
+        FileItemDTO singleFile = fileStorageService.createBlankFile(user, "/", "single.txt", "Direct file content");
+        ShareRequest fileShareReq = new ShareRequest();
+        fileShareReq.setFileId(singleFile.getId());
+        ShareResponseDTO fileShare = shareService.createShareLink(user, fileShareReq);
+        assertNotNull(fileShare.getToken());
+        assertEquals("single.txt", fileShare.getFileName());
+
+        org.springframework.core.io.Resource res = shareService.getSharedFileResource(fileShare.getToken());
+        assertNotNull(res);
+        assertTrue(res.exists());
+    }
 }

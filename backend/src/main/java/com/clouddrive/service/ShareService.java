@@ -17,6 +17,8 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,17 +35,20 @@ public class ShareService {
     private final UserShareRepository userShareRepository;
     private final UserRepository userRepository;
     private final ActivityService activityService;
+    private final FileStorageService fileStorageService;
 
     public ShareService(ShareLinkRepository shareLinkRepository,
                         FileItemRepository fileItemRepository,
                         UserShareRepository userShareRepository,
                         UserRepository userRepository,
-                        ActivityService activityService) {
+                        ActivityService activityService,
+                        FileStorageService fileStorageService) {
         this.shareLinkRepository = shareLinkRepository;
         this.fileItemRepository = fileItemRepository;
         this.userShareRepository = userShareRepository;
         this.userRepository = userRepository;
         this.activityService = activityService;
+        this.fileStorageService = fileStorageService;
     }
 
     private ShareResponseDTO toDTO(ShareLink link) {
@@ -51,9 +56,9 @@ public class ShareService {
         dto.setId(link.getId());
         dto.setToken(link.getToken());
         dto.setFileId(link.getFileItem().getId());
-        dto.setFileName(link.getFileItem().getName());
-        dto.setFileSize(link.getFileItem().getSize());
-        dto.setContentType(link.getFileItem().getContentType());
+        dto.setFileName(link.getFileItem().isDirectory() ? link.getFileItem().getName() + ".zip" : link.getFileItem().getName());
+        dto.setFileSize(link.getFileItem().isDirectory() ? 0L : link.getFileItem().getSize());
+        dto.setContentType(link.getFileItem().isDirectory() ? "application/zip" : link.getFileItem().getContentType());
         dto.setExpiresAt(link.getExpiresAt());
         dto.setExpired(link.getExpiresAt() != null && link.getExpiresAt().isBefore(LocalDateTime.now()));
         dto.setDownloadCount(link.getDownloadCount());
@@ -66,10 +71,6 @@ public class ShareService {
     public ShareResponseDTO createShareLink(User user, ShareRequest request) {
         FileItem fileItem = fileItemRepository.findByIdAndOwner(request.getFileId(), user)
                 .orElseThrow(() -> new IllegalArgumentException("File not found or permission denied"));
-
-        if (fileItem.isDirectory()) {
-            throw new IllegalArgumentException("Direct folder sharing is not supported yet");
-        }
 
         // Check if an active share link already exists
         Optional<ShareLink> existing = shareLinkRepository.findByFileItemAndCreatedBy(fileItem, user);
@@ -136,6 +137,26 @@ public class ShareService {
         } catch (MalformedURLException e) {
             throw new RuntimeException("Invalid file URL", e);
         }
+    }
+
+    @Transactional
+    public void streamSharedFolderZip(String token, OutputStream out) throws IOException {
+        ShareLink link = shareLinkRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Share link not found or invalid"));
+
+        if (link.getExpiresAt() != null && link.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("This share link has expired");
+        }
+
+        FileItem folder = link.getFileItem();
+        if (!folder.isDirectory()) {
+            throw new IllegalArgumentException("Shared item is not a folder");
+        }
+
+        link.setDownloadCount(link.getDownloadCount() + 1);
+        shareLinkRepository.save(link);
+
+        fileStorageService.streamFolderAsZip(folder.getOwner(), folder.getId(), out);
     }
 
     @Transactional(readOnly = true)

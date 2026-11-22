@@ -9,62 +9,24 @@ export const BRAND_SUBTITLE =
 export const SHORTCUTS_ENABLED = parseEnvBoolean(import.meta.env.VITE_SHORTCUTS_ENABLED, false);
 
 export const DEFAULT_THEME: Theme = "gdrive-light";
-export const THEMES: Theme[] = [
-  "gdrive-light",
-  "gdrive-dark",
-  "indigo",
-  "emerald",
-  "ocean",
-  "sunset",
-  "nordic",
-];
+export const THEMES: Theme[] = ["gdrive-light", "gdrive-dark"];
 export const THEME_STORAGE_KEY = "clouddrive-theme";
 
 export const THEME_CONFIGS: Record<
-  "gdrive-light" | "gdrive-dark" | "indigo" | "emerald" | "ocean" | "sunset" | "nordic",
+  "gdrive-light" | "gdrive-dark",
   { name: string; icon: string; dotClass: string; desc: string }
 > = {
   "gdrive-light": {
-    name: "Drive Light",
-    icon: "📁",
+    name: "Light",
+    icon: "☀️",
     dotClass: "bg-blue-600",
-    desc: "Clean Minimalist Light",
+    desc: "Light theme",
   },
   "gdrive-dark": {
-    name: "Drive Dark",
+    name: "Dark",
     icon: "🌙",
     dotClass: "bg-blue-400",
-    desc: "Clean Minimalist Dark",
-  },
-  indigo: {
-    name: "Deep Indigo",
-    icon: "🌌",
-    dotClass: "bg-indigo-500",
-    desc: "Cyber Violet & Deep Indigo",
-  },
-  emerald: {
-    name: "Emerald Aurora",
-    icon: "🌲",
-    dotClass: "bg-emerald-500",
-    desc: "Matrix Obsidian & Mint Green",
-  },
-  ocean: {
-    name: "Oceanic Azure",
-    icon: "🌊",
-    dotClass: "bg-sky-500",
-    desc: "Midnight Navy & Cyan Glow",
-  },
-  sunset: {
-    name: "Sunset Rose",
-    icon: "🌅",
-    dotClass: "bg-rose-500",
-    desc: "Velvet Noir & Warm Amber",
-  },
-  nordic: {
-    name: "Nordic Light",
-    icon: "⚪",
-    dotClass: "bg-slate-300",
-    desc: "Crisp Modern Minimalist Light",
+    desc: "Dark theme",
   },
 };
 export const LAST_PATH_STORAGE_KEY = "clouddrive-last-path";

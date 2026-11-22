@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Lock, User, Mail, UserCheck, ArrowRight, Palette } from "lucide-react";
+import { Lock, User, Mail, UserCheck, ArrowRight } from "lucide-react";
 import { loginUser, registerUser, setAuthToken, type UserProfile } from "../services/springApi";
 import { useTheme } from "../hooks/useTheme";
-import { THEMES, THEME_CONFIGS } from "../constants";
 import { DriveLogo } from "./DriveLogo";
+import { ThemeToggle } from "./ThemeToggle";
 
 export { DriveLogo };
 
@@ -12,8 +12,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ onSuccess }: AuthModalProps) {
-  const [theme, setTheme] = useTheme();
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [theme, , toggleTheme] = useTheme();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -59,48 +58,9 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
 
   return (
     <div className="min-h-screen theme-bg-app flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans transition-colors duration-200">
-      {/* Floating Theme Selector */}
+      {/* Floating Theme Toggle Switch */}
       <div className="absolute top-6 right-6 z-20">
-        <div className="relative">
-          <button
-            onClick={() => setThemeMenuOpen(!themeMenuOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-full theme-bg-surface border theme-border theme-text-sub hover:theme-text-main shadow-sm hover:shadow transition-all cursor-pointer text-xs font-medium"
-            title="Change Theme"
-          >
-            <Palette className="w-3.5 h-3.5 text-[var(--app-primary)]" />
-            <span>{THEME_CONFIGS[theme as keyof typeof THEME_CONFIGS]?.name || "Theme"}</span>
-          </button>
-
-          {themeMenuOpen && (
-            <div className="absolute right-0 mt-2 w-52 theme-bg-surface border theme-border rounded-2xl shadow-xl p-1.5 z-50 space-y-1 animate-fadeUp">
-              {THEMES.map((t) => {
-                const conf = THEME_CONFIGS[t as keyof typeof THEME_CONFIGS];
-                if (!conf) return null;
-                const isSelected = theme === t;
-                return (
-                  <button
-                    key={t}
-                    onClick={() => {
-                      setTheme(t);
-                      setThemeMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                      isSelected
-                        ? "theme-pill-active font-semibold"
-                        : "theme-text-sub hover:theme-text-main theme-bg-hover"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${conf.dotClass}`} />
-                      <span>{conf.name}</span>
-                    </div>
-                    {isSelected && <span className="text-[10px]">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
 
       {/* Main Account Card */}

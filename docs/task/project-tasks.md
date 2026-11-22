@@ -93,6 +93,7 @@
 - [x] Updated `deploy-cloudshell.sh`: structured 5-step build process, activates `gcloud` Spring profile, clean progress output, `--project` flag support.
 - [x] Pushed all changes (UI + Cloud config) to GitHub `https://github.com/venu-822006/cct.git` branch `main`.
 - [x] Completely removed all remaining Google Drive trademark logos, Google 4-color Plus icon, and Google Apps waffle menu; replaced with custom Cloud Drive emblem and clean modern iconography.
+- [x] Streamlined themes to Light and Dark only (`gdrive-light` and `gdrive-dark`), removed unused multi-color themes, and added a single smooth toggle switch component (`ThemeToggle`) across Header, AuthModal, and Settings modal.
 - [x] Verified full test suite (`bun test` -> 24/24 pass) and production build (`bun run build` -> 0 errors).
 
 ## 4. Google Drive Theme Conversion
@@ -119,4 +120,23 @@
 - [x] Cleaned `.env` environment configuration and `README.md`.
 - [x] Purged demo directories and files from physical storage (`storage_root/` and legacy `storage_drive/`).
 - [x] Cleared demo data from database so all user drives start in a clean zero state.
+
+## 6. Public Share Link Under Three Dots Context Menu
+- [x] Added Three Dots (`⋮` / `MoreVertical`) context menu button to all items across the UI:
+  - Grid View Folders (top-right of folder cards)
+  - Grid View Files (card title header and hover action bar)
+  - List View Table Rows (rightmost Actions column for each row)
+  - Multi-select and Single-item Selection Action Bar
+- [x] Placed "Public link" prominently at the top of the Three Dots dropdown menu (`Link2` icon, title "Public link", subtitle "Generate & copy link"):
+  - Clicking automatically generates an unauthenticated shareable link
+  - Copies link directly to clipboard (`navigator.clipboard.writeText`)
+  - Displays instant toast feedback ("Public link generated & copied to clipboard!")
+  - Opens Google Drive Share modal showing expiration options, copy button, and new-tab preview button
+- [x] Implemented backend public folder sharing support:
+  - Enabled folder sharing in `ShareService.createShareLink`
+  - Streaming folder contents as ZIP on unauthenticated download (`/api/share/download/{token}`) via `HttpServletResponse` streaming
+  - Public folder info endpoint (`/api/share/info/{token}`) returns folder metadata and `.zip` filename
+- [x] Added unit tests for public file and folder sharing in `CloudDriveApplicationTests.java` (8/8 tests passing, 100% pass rate).
+- [x] Executed live end-to-end test verifying file and folder public link generation, unauthenticated info retrieval, and ZIP streaming.
+- [x] Built frontend production assets (`npm run build`) and synced to Spring Boot `backend/src/main/resources/static/`.
 - [x] Tested and verified via backend test suite (`mvn test`) and frontend build (`npm run build`).

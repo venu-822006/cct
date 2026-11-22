@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DEFAULT_THEME, THEME_STORAGE_KEY, THEMES } from "../constants";
+import { DEFAULT_THEME, THEME_STORAGE_KEY } from "../constants";
 import type { Theme } from "../types";
 
 function getInitialTheme(): Theme {
@@ -7,10 +7,10 @@ function getInitialTheme(): Theme {
     return DEFAULT_THEME;
   }
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored && THEMES.includes(stored as Theme)) {
-    return stored as Theme;
+  if (stored === "gdrive-dark" || stored === "dark") {
+    return "gdrive-dark";
   }
-  return DEFAULT_THEME;
+  return "gdrive-light";
 }
 
 export function useTheme() {
@@ -18,13 +18,7 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    const isDark =
-      theme === "gdrive-dark" ||
-      theme === "indigo" ||
-      theme === "emerald" ||
-      theme === "ocean" ||
-      theme === "sunset";
-    if (isDark) {
+    if (theme === "gdrive-dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
@@ -32,5 +26,9 @@ export function useTheme() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  return [theme, setTheme] as const;
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "gdrive-dark" ? "gdrive-light" : "gdrive-dark"));
+  };
+
+  return [theme, setTheme, toggleTheme] as const;
 }

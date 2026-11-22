@@ -11,6 +11,7 @@ import {
   Star,
   Trash2,
   Share2,
+  Link2,
   Download,
   Eye,
   Edit3,
@@ -104,14 +105,13 @@ import {
 
 import { AuthModal } from "./components/AuthModal";
 import { useTheme } from "./hooks/useTheme";
-import { THEMES, THEME_CONFIGS } from "./constants";
 import { DriveLogo } from "./components/DriveLogo";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 
 
 export function App() {
-  const [theme, setTheme] = useTheme();
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [theme, , toggleTheme] = useTheme();
 
   // Auth State
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -167,6 +167,7 @@ export function App() {
   const [versionsLoading, setVersionsLoading] = useState(false);
 
   const [colorPickerTarget, setColorPickerTarget] = useState<DriveItem | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
   // Preview Modals
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: "image" | "audio" | "video" | "pdf"; name: string } | null>(null);
@@ -212,6 +213,13 @@ export function App() {
       })
       .catch(() => setUser(null))
       .finally(() => setAuthLoading(false));
+  }, []);
+
+  // Close Three Dots Menu when clicking outside
+  useEffect(() => {
+    const handleDocClick = () => setActiveMenuId(null);
+    window.addEventListener("click", handleDocClick);
+    return () => window.removeEventListener("click", handleDocClick);
   }, []);
 
   // 2. Load View Data
@@ -435,6 +443,34 @@ export function App() {
     }
   };
 
+  // Quick Public Share handler (under Three Dots option)
+  const handleOpenPublicShare = async (item: DriveItem) => {
+    setActiveMenuId(null);
+    setShareItemTarget(item);
+    setShareTab("public");
+    try {
+      const res = await createShareLink(item.id, shareExpiryHours);
+      setGeneratedShare(res);
+      const fullUrl = `${window.location.origin}/?share=${res.token}`;
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(fullUrl);
+        notifySuccess("Public link generated & copied to clipboard!");
+      } else {
+        notifySuccess("Public link generated!");
+      }
+    } catch (err: any) {
+      setGeneratedShare(null);
+      setErrorAlert(err.message || "Failed to generate public link");
+    }
+  };
+
+  const handleOpenUserShare = (item: DriveItem) => {
+    setActiveMenuId(null);
+    setShareItemTarget(item);
+    setShareTab("user");
+    setGeneratedShare(null);
+  };
+
   // Public Share
   const handleGeneratePublicShare = async () => {
     if (!shareItemTarget) return;
@@ -459,6 +495,135 @@ export function App() {
     } catch (err: any) {
       setErrorAlert(err.message);
     }
+  };
+
+  // Reusable Three Dots Dropdown Menu Component
+  const renderThreeDotsMenu = (item: DriveItem, alignRight = true) => {
+    if (activeMenuId !== item.id) return null;
+
+    return (
+      <div
+        className={`absolute ${alignRight ? "right-0" : "left-0"} top-full mt-1.5 w-56 bg-white dark:bg-[#1e1f20] border border-[#e0e2ec] dark:border-[#3c4043] rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-medium text-[#1f1f1f] dark:text-[#e3e3e3] animate-in fade-in zoom-in-95 duration-100`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {currentView !== "trash" ? (
+          <>
+            {/* Public Link - Top Prominent Action under Three Dots */}
+            <button
+              onClick={() => handleOpenPublicShare(item)}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-[#c2e7ff]/30 dark:hover:bg-[#004a77]/30 text-[#0b57d0] dark:text-[#a8c7fa] font-semibold transition-colors cursor-pointer"
+            >
+              <Link2 className="w-4 h-4 shrink-0 text-[#0b57d0] dark:text-[#a8c7fa]" />
+              <div className="flex flex-col min-w-0">
+                <span className="leading-tight">Public link</span>
+                <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400 truncate">Generate & copy link</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleOpenUserShare(item)}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Share2 className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+              <span>Share with user</span>
+            </button>
+
+            <div className="my-1 border-t border-[#e0e2ec]/60 dark:border-[#3c4043]/60" />
+
+            <button
+              onClick={() => {
+                setActiveMenuId(null);
+                toggleStarItem(item.id).then(loadCurrentViewData);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Star className={`w-4 h-4 shrink-0 ${item.starred ? "text-amber-500 fill-current" : "text-slate-500 dark:text-slate-400"}`} />
+              <span>{item.starred ? "Remove from starred" : "Add to starred"}</span>
+            </button>
+
+            <a
+              href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
+              download
+              onClick={() => setActiveMenuId(null)}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-inherit"
+            >
+              <Download className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+              <span>{item.directory ? "Download as ZIP" : "Download"}</span>
+            </a>
+
+            <button
+              onClick={() => {
+                setActiveMenuId(null);
+                setRenameItemTarget(item);
+                setRenameValue(item.name);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Edit3 className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+              <span>Rename</span>
+            </button>
+
+            {!item.directory && (
+              <button
+                onClick={() => {
+                  setActiveMenuId(null);
+                  handleOpenVersions(item);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <History className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                <span>Version history</span>
+              </button>
+            )}
+
+            {item.directory && (
+              <button
+                onClick={() => {
+                  setActiveMenuId(null);
+                  setColorPickerTarget(item);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Palette className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                <span>Folder color</span>
+              </button>
+            )}
+
+            <div className="my-1 border-t border-[#e0e2ec]/60 dark:border-[#3c4043]/60" />
+
+            <button
+              onClick={() => {
+                setActiveMenuId(null);
+                moveItemToTrash(item.id).then(() => {
+                  notifySuccess(`Moved "${item.name}" to Trash`);
+                  loadCurrentViewData();
+                  loadQuota();
+                });
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 shrink-0" />
+              <span>Move to Trash</span>
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => {
+              setActiveMenuId(null);
+              restoreItemFromTrash(item.id).then(() => {
+                notifySuccess(`Restored "${item.name}"`);
+                loadCurrentViewData();
+                loadQuota();
+              });
+            }}
+            className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>Restore from Trash</span>
+          </button>
+        )}
+      </div>
+    );
   };
 
   // Editor
@@ -770,48 +935,7 @@ export function App() {
 
         {/* User Profile, Theme Switcher & Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <div className="relative">
-            <button
-              onClick={() => setThemeMenuOpen(!themeMenuOpen)}
-              title="Change Theme"
-              className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-sub hover:theme-text-main transition-colors cursor-pointer"
-            >
-              <Palette className="w-5 h-5" />
-            </button>
-
-            {themeMenuOpen && (
-              <div className="absolute right-0 mt-2 w-52 theme-bg-surface border theme-border rounded-2xl shadow-xl p-1.5 z-50 space-y-1 animate-fadeUp">
-                <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider theme-text-muted">
-                  Themes
-                </div>
-                {THEMES.map((t) => {
-                  const conf = THEME_CONFIGS[t as keyof typeof THEME_CONFIGS];
-                  if (!conf) return null;
-                  const isSelected = theme === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        setTheme(t);
-                        setThemeMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                        isSelected
-                          ? "theme-pill-active font-semibold"
-                          : "theme-text-sub hover:theme-text-main theme-bg-hover"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${conf.dotClass}`} />
-                        <span>{conf.name}</span>
-                      </div>
-                      {isSelected && <span className="text-[10px]">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
           <button
             onClick={() => setSettingsOpen(true)}
@@ -1133,6 +1257,19 @@ export function App() {
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-1.5 bg-[#c2e7ff] text-[#001d35] dark:bg-[#004a77] dark:text-[#c2e7ff] px-3.5 py-1.5 rounded-full shadow-sm text-xs font-semibold">
                   <span className="mr-1">{selectedIds.size} selected</span>
+                  {selectedIds.size === 1 && (
+                    <button
+                      onClick={() => {
+                        const selectedId = Array.from(selectedIds)[0];
+                        const item = items.find((i) => i.id === selectedId);
+                        if (item) handleOpenPublicShare(item);
+                      }}
+                      className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                      title="Get public link"
+                    >
+                      <Link2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={handleBatchDownloadZip}
                     className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
@@ -1481,60 +1618,38 @@ export function App() {
                                 </span>
                               </div>
 
-                              {/* Hover Action Menu */}
+                              {/* Action Menu with Three Dots */}
                               <div
-                                className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                className="flex items-center gap-1 shrink-0 relative"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {currentView !== "trash" ? (
                                   <>
                                     <button
                                       onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
-                                      className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 ${
-                                        item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
+                                      className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity ${
+                                        item.starred ? "text-amber-500 !opacity-100" : "theme-text-muted hover:theme-text-main"
                                       }`}
                                       title="Star"
                                     >
                                       <Star className="w-3.5 h-3.5 fill-current" />
                                     </button>
-                                    <button
-                                      onClick={() => setColorPickerTarget(item)}
-                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                      title="Folder Color"
-                                    >
-                                      <Palette className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setRenameItemTarget(item);
-                                        setRenameValue(item.name);
-                                      }}
-                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                      title="Rename"
-                                    >
-                                      <Edit3 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <a
-                                      href={getFolderZipDownloadUrl(item.id)}
-                                      download
-                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                      title="Download ZIP"
-                                    >
-                                      <FolderDown className="w-3.5 h-3.5" />
-                                    </a>
-                                    <button
-                                      onClick={() => {
-                                        moveItemToTrash(item.id).then(() => {
-                                          notifySuccess(`Moved "${item.name}" to Trash`);
-                                          loadCurrentViewData();
-                                          loadQuota();
-                                        });
-                                      }}
-                                      className="p-1 rounded-lg hover:bg-red-500/15 theme-text-muted hover:text-red-500"
-                                      title="Move to Trash"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+
+                                    {/* Three Dots More Options Menu */}
+                                    <div className="relative">
+                                      <button
+                                        onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                                        className={`p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
+                                          activeMenuId === item.id
+                                            ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
+                                            : "theme-text-muted hover:theme-text-main opacity-0 group-hover:opacity-100"
+                                        }`}
+                                        title="More options"
+                                      >
+                                        <MoreVertical className="w-4 h-4" />
+                                      </button>
+                                      {renderThreeDotsMenu(item, true)}
+                                    </div>
                                   </>
                                 ) : (
                                   <button
@@ -1574,11 +1689,11 @@ export function App() {
                                 selectedIds.has(item.id)
                                   ? "border-[#0b57d0] dark:border-[#a8c7fa] bg-[#c2e7ff]/25"
                                   : "border-[#e0e2ec] dark:border-[#3c4043] hover:border-[#c2e7ff]"
-                              } rounded-2xl overflow-hidden transition-all flex flex-col justify-between relative cursor-pointer shadow-xs hover:shadow-md`}
+                              } rounded-2xl transition-all flex flex-col justify-between relative cursor-pointer shadow-xs hover:shadow-md`}
                               onClick={() => handleItemPreviewOrOpen(item)}
                             >
                               {/* Top Preview/Icon Area */}
-                              <div className="h-32 bg-white/70 dark:bg-black/20 flex items-center justify-center relative p-4 border-b border-[#e0e2ec]/60 dark:border-[#3c4043]/60">
+                              <div className="h-32 bg-white/70 dark:bg-black/20 flex items-center justify-center relative p-4 border-b border-[#e0e2ec]/60 dark:border-[#3c4043]/60 rounded-t-2xl overflow-hidden">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1612,6 +1727,20 @@ export function App() {
                                   <span className="text-xs font-semibold theme-text-main truncate" title={item.name}>
                                     {item.name}
                                   </span>
+                                  <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                                      className={`p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
+                                        activeMenuId === item.id
+                                          ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
+                                          : "theme-text-muted hover:theme-text-main opacity-0 group-hover:opacity-100"
+                                      }`}
+                                      title="More options"
+                                    >
+                                      <MoreVertical className="w-3.5 h-3.5" />
+                                    </button>
+                                    {renderThreeDotsMenu(item, true)}
+                                  </div>
                                 </div>
                                 <div className="flex justify-between items-center text-[11px] theme-text-muted mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40">
                                   <span>{formatBytes(item.size)}</span>
@@ -1635,31 +1764,11 @@ export function App() {
                                         <Star className="w-3.5 h-3.5 fill-current" />
                                       </button>
                                       <button
-                                        onClick={() => {
-                                          setShareItemTarget(item);
-                                          setGeneratedShare(null);
-                                        }}
-                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                        title="Share"
+                                        onClick={() => handleOpenPublicShare(item)}
+                                        className="p-1 rounded hover:bg-[#c2e7ff]/30 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                        title="Public link"
                                       >
-                                        <Share2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleOpenVersions(item)}
-                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                        title="Version History"
-                                      >
-                                        <History className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setRenameItemTarget(item);
-                                          setRenameValue(item.name);
-                                        }}
-                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                        title="Rename"
-                                      >
-                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <Link2 className="w-3.5 h-3.5" />
                                       </button>
                                       <a
                                         href={getFileDownloadUrl(item.id)}
@@ -1670,17 +1779,11 @@ export function App() {
                                         <Download className="w-3.5 h-3.5" />
                                       </a>
                                       <button
-                                        onClick={() => {
-                                          moveItemToTrash(item.id).then(() => {
-                                            notifySuccess(`Moved "${item.name}" to Trash`);
-                                            loadCurrentViewData();
-                                            loadQuota();
-                                          });
-                                        }}
-                                        className="p-1 rounded hover:bg-red-500/15 theme-text-muted hover:text-red-500"
-                                        title="Move to Trash"
+                                        onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="More options"
                                       >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <MoreVertical className="w-3.5 h-3.5" />
                                       </button>
                                     </>
                                   ) : (
@@ -1695,7 +1798,7 @@ export function App() {
                                       className="p-1 rounded hover:bg-emerald-500/15 text-emerald-500"
                                       title="Restore"
                                     >
-                                      <RotateCcw className="w-4 h-4" />
+                                      <RotateCcw className="w-3.5 h-3.5" />
                                     </button>
                                   )}
                                 </div>
@@ -1762,75 +1865,65 @@ export function App() {
                           <td className="py-3 px-4 theme-text-muted text-xs">
                             {item.directory ? "—" : formatBytes(item.size)}
                           </td>
-                          <td className="py-3 px-4 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
-                            {currentView !== "trash" ? (
-                              <>
-                                <button
-                                  onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
-                                  className={`p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 ${
-                                    item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
-                                  }`}
-                                  title="Star"
-                                >
-                                  <Star className="w-4 h-4 fill-current" />
-                                </button>
+                          <td className="py-3 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              {currentView !== "trash" ? (
+                                <>
+                                  <button
+                                    onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
+                                    className={`p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 ${
+                                      item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
+                                    }`}
+                                    title="Star"
+                                  >
+                                    <Star className="w-4 h-4 fill-current" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenPublicShare(item)}
+                                    className="p-1.5 rounded-full hover:bg-[#c2e7ff]/30 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                    title="Public link"
+                                  >
+                                    <Link2 className="w-4 h-4" />
+                                  </button>
+                                  <a
+                                    href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
+                                    download
+                                    className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main inline-block"
+                                    title="Download"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </a>
+
+                                  {/* Three Dots More Options Menu */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                                      className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
+                                        activeMenuId === item.id ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa]" : "theme-text-muted hover:theme-text-main"
+                                      }`}
+                                      title="More options"
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </button>
+                                    {renderThreeDotsMenu(item, true)}
+                                  </div>
+                                </>
+                              ) : (
                                 <button
                                   onClick={() => {
-                                    setShareItemTarget(item);
-                                    setGeneratedShare(null);
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                  title="Share"
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                </button>
-                                <a
-                                  href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
-                                  download
-                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] inline-block"
-                                  title="Download"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </a>
-                                <button
-                                  onClick={() => {
-                                    setRenameItemTarget(item);
-                                    setRenameValue(item.name);
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
-                                  title="Rename"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    moveItemToTrash(item.id).then(() => {
-                                      notifySuccess(`Moved "${item.name}" to Trash`);
+                                    restoreItemFromTrash(item.id).then(() => {
+                                      notifySuccess(`Restored "${item.name}"`);
                                       loadCurrentViewData();
                                       loadQuota();
                                     });
                                   }}
-                                  className="p-1.5 rounded-lg hover:bg-red-500/15 theme-text-muted hover:text-red-500"
-                                  title="Trash"
+                                  className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
+                                  title="Restore"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <RotateCcw className="w-4 h-4" />
                                 </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  restoreItemFromTrash(item.id).then(() => {
-                                    notifySuccess(`Restored "${item.name}"`);
-                                    loadCurrentViewData();
-                                    loadQuota();
-                                  });
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
-                                title="Restore"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </button>
-                            )}
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2128,22 +2221,79 @@ export function App() {
               ) : (
                 <div className="space-y-4">
                   <div className="p-3 theme-bg-input border theme-border rounded-xl">
-                    <p className="text-xs theme-text-muted mb-1">Link</p>
-                    <p className="text-sm font-mono text-[var(--app-primary-light)] truncate">
-                      {window.location.origin}/?share={generatedShare.token}
-                    </p>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold theme-text-muted flex items-center gap-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+                        Public Link
+                      </span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 bg-white dark:bg-[#1e1f20] p-2.5 rounded-lg border theme-border-subtle">
+                      <p className="text-xs font-mono text-[#0b57d0] dark:text-[#a8c7fa] truncate select-all">
+                        {window.location.origin}/?share={generatedShare.token}
+                      </p>
+                      <button
+                        onClick={() => {
+                          const fullUrl = `${window.location.origin}/?share=${generatedShare.token}`;
+                          navigator.clipboard.writeText(fullUrl);
+                          notifySuccess("Public link copied to clipboard!");
+                        }}
+                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] shrink-0"
+                        title="Copy link"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      const fullUrl = `${window.location.origin}/?share=${generatedShare.token}`;
-                      navigator.clipboard.writeText(fullUrl);
-                      notifySuccess("Share link copied to clipboard!");
-                    }}
-                    className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <Copy className="w-4 h-4" />
-                    <span>Copy link</span>
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const fullUrl = `${window.location.origin}/?share=${generatedShare.token}`;
+                        navigator.clipboard.writeText(fullUrl);
+                        notifySuccess("Public link copied to clipboard!");
+                      }}
+                      className="flex-1 py-2.5 theme-btn-primary text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>Copy link</span>
+                    </button>
+                    <a
+                      href={`${window.location.origin}/?share=${generatedShare.token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-xl border theme-border hover:theme-bg-hover theme-text-muted hover:theme-text-main transition-colors flex items-center justify-center"
+                      title="Open in new tab"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+
+                  {/* Expiration Settings */}
+                  <div className="pt-2 border-t theme-border-subtle">
+                    <label className="block text-xs font-semibold theme-text-muted mb-1.5">Change Expiration</label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={shareExpiryHours}
+                        onChange={(e) => setShareExpiryHours(Number(e.target.value))}
+                        className="flex-1 theme-bg-input border theme-border rounded-xl px-3 py-2 text-xs theme-text-main focus:outline-none"
+                      >
+                        <option value={24} className="theme-bg-surface">Expires in 24 hours</option>
+                        <option value={168} className="theme-bg-surface">Expires in 7 days</option>
+                        <option value={720} className="theme-bg-surface">Expires in 30 days</option>
+                        <option value={0} className="theme-bg-surface">Never expires</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePublicShare}
+                        className="px-3 py-2 text-xs font-semibold rounded-xl border theme-border hover:theme-bg-hover theme-text-main transition-colors"
+                      >
+                        Update
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )
             ) : (
@@ -2281,31 +2431,13 @@ export function App() {
               </button>
             </div>
 
-            {/* Appearance Theme Selector */}
-            <div className="space-y-2.5 pb-4 border-b theme-border-subtle">
-              <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">Appearance Theme</p>
-              <div className="grid grid-cols-2 gap-2">
-                {THEMES.map((t) => {
-                  const conf = THEME_CONFIGS[t as keyof typeof THEME_CONFIGS];
-                  if (!conf) return null;
-                  const isSelected = theme === t;
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTheme(t)}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-                        isSelected
-                          ? "theme-pill-active font-semibold shadow-xs"
-                          : "theme-bg-subtle border theme-border theme-text-sub hover:theme-text-main theme-bg-hover"
-                      }`}
-                    >
-                      <span className={`w-3 h-3 rounded-full ${conf.dotClass}`} />
-                      <span>{conf.name}</span>
-                    </button>
-                  );
-                })}
+            {/* Appearance Toggle */}
+            <div className="flex items-center justify-between pb-4 border-b theme-border-subtle">
+              <div>
+                <p className="text-sm font-medium theme-text-main">Dark Theme</p>
+                <p className="text-xs theme-text-muted">Switch between light and dark mode</p>
               </div>
+              <ThemeToggle theme={theme} onToggle={toggleTheme} />
             </div>
 
             {/* Profile Info Form */}
