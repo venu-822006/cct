@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,10 +66,21 @@ public class FileStorageService {
         return path;
     }
 
+    private void validatePathInsideUserRoot(Path target, Path userRoot) {
+        Path normalizedTarget = target.toAbsolutePath().normalize();
+        Path normalizedRoot = userRoot.toAbsolutePath().normalize();
+        if (!normalizedTarget.startsWith(normalizedRoot)) {
+            throw new SecurityException("Directory traversal attempt detected: destination " + normalizedTarget + " is outside user root " + normalizedRoot);
+        }
+    }
+
     private String sanitizeFilename(String filename) {
-        String clean = StringUtils.cleanPath(filename);
-        if (clean.contains("..")) {
-            throw new IllegalArgumentException("Cannot store file with relative path sequence " + clean);
+        if (!StringUtils.hasText(filename)) {
+            throw new IllegalArgumentException("Filename cannot be empty");
+        }
+        String clean = StringUtils.cleanPath(filename.trim());
+        if (clean.contains("..") || clean.contains("/") || clean.contains("\\") || clean.contains("\0")) {
+            throw new SecurityException("Filename contains forbidden path traversal sequence: " + clean);
         }
         return clean;
     }
@@ -83,6 +95,9 @@ public class FileStorageService {
             return "/";
         }
         String p = path.trim().replace('\\', '/');
+        if (p.contains("..")) {
+            throw new SecurityException("Virtual path cannot contain directory traversal sequence '..'");
+        }
         if (!p.startsWith("/")) p = "/" + p;
         if (p.endsWith("/") && p.length() > 1) p = p.substring(0, p.length() - 1);
         return p;
@@ -145,6 +160,7 @@ public class FileStorageService {
         Path userDir = getUserStoragePath(user);
         String relativeSubdir = (normalizedPath.equals("/") ? "" : normalizedPath.substring(1) + "/") + cleanName;
         Path folderDiskPath = userDir.resolve(relativeSubdir).normalize();
+        validatePathInsideUserRoot(folderDiskPath, userDir);
 
         try {
             Files.createDirectories(folderDiskPath);
@@ -180,12 +196,25 @@ public class FileStorageService {
             throw new IllegalArgumentException("A file with name '" + cleanName + "' already exists.");
         }
 
+        byte[] contentBytes = (content != null ? content : "").getBytes(StandardCharsets.UTF_8);
+        long incomingSize = contentBytes.length;
+
+        Long rawCurrentUsed = fileItemRepository.sumUsedBytesByOwner(user);
+        long currentUsed = rawCurrentUsed != null ? rawCurrentUsed : 0L;
+        long quota = user.getQuotaBytes() > 0 ? user.getQuotaBytes() : defaultQuotaBytes;
+
+        if (currentUsed + incomingSize > quota) {
+            throw new IllegalArgumentException("Storage quota exceeded! Available space: "
+                    + ((quota - currentUsed) / (1024 * 1024)) + " MB.");
+        }
+
         Path userDir = getUserStoragePath(user);
         String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-        Path filePath = userDir.resolve(uniquePrefix + "_" + cleanName);
+        Path filePath = userDir.resolve(uniquePrefix + "_" + cleanName).normalize();
+        validatePathInsideUserRoot(filePath, userDir);
 
         try {
-            Files.writeString(filePath, content != null ? content : "");
+            Files.write(filePath, contentBytes);
             long size = Files.size(filePath);
 
             FileItem item = new FileItem();
@@ -249,7 +278,8 @@ public class FileStorageService {
 
                 // Write new content
                 String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-                Path newTarget = userDir.resolve(uniquePrefix + "_" + originalName);
+                Path newTarget = userDir.resolve(uniquePrefix + "_" + originalName).normalize();
+                validatePathInsideUserRoot(newTarget, userDir);
                 try {
                     Files.copy(file.getInputStream(), newTarget, StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e) {
@@ -268,7 +298,8 @@ public class FileStorageService {
 
             String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
             String diskFileName = uniquePrefix + "_" + originalName;
-            Path targetLocation = userDir.resolve(diskFileName);
+            Path targetLocation = userDir.resolve(diskFileName).normalize();
+            validatePathInsideUserRoot(targetLocation, userDir);
             try {
                 Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
@@ -340,6 +371,18 @@ public class FileStorageService {
     @Transactional
     public FileItemDTO saveFileContent(User user, Long fileId, String content) {
         FileItem item = getFileItem(user, fileId);
+        byte[] newContentBytes = (content != null ? content : "").getBytes(StandardCharsets.UTF_8);
+        long newSize = newContentBytes.length;
+        long delta = newSize - item.getSize();
+        if (delta > 0) {
+            Long rawCurrentUsed = fileItemRepository.sumUsedBytesByOwner(user);
+            long currentUsed = rawCurrentUsed != null ? rawCurrentUsed : 0L;
+            long quota = user.getQuotaBytes() > 0 ? user.getQuotaBytes() : defaultQuotaBytes;
+            if (currentUsed + delta > quota) {
+                throw new IllegalArgumentException("Storage quota exceeded! Cannot save modified content.");
+            }
+        }
+
         try {
             Path currentPath = Paths.get(item.getDiskPath());
 
@@ -356,10 +399,10 @@ public class FileStorageService {
             // Create new disk file for edited version to preserve previous version history
             Path userDir = getUserStoragePath(user);
             String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-            Path newDiskPath = userDir.resolve(uniquePrefix + "_" + item.getName());
+            Path newDiskPath = userDir.resolve(uniquePrefix + "_" + item.getName()).normalize();
+            validatePathInsideUserRoot(newDiskPath, userDir);
 
-            Files.writeString(newDiskPath, content != null ? content : "");
-            long newSize = Files.size(newDiskPath);
+            Files.write(newDiskPath, newContentBytes);
 
             item.setDiskPath(newDiskPath.toString());
             item.setSize(newSize);
@@ -428,12 +471,39 @@ public class FileStorageService {
         FileItem item = getFileItem(user, fileId);
         String cleanName = sanitizeFilename(newName.trim());
         String oldName = item.getName();
+        if (cleanName.equals(oldName)) {
+            return FileItemDTO.fromEntity(item);
+        }
+
+        Optional<FileItem> existing = fileItemRepository.findByOwnerAndPathAndNameAndIsTrashedFalse(user, item.getPath(), cleanName);
+        if (existing.isPresent()) {
+            throw new IllegalArgumentException("An item with name '" + cleanName + "' already exists in this folder.");
+        }
+
+        String oldVirtualFolder = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + oldName;
+        String newVirtualFolder = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + cleanName;
+
         item.setName(cleanName);
         if (!item.isDirectory()) {
             item.setExtension(extractExtension(cleanName));
         }
         item.setUpdatedAt(LocalDateTime.now());
         FileItem saved = fileItemRepository.save(item);
+
+        if (item.isDirectory()) {
+            List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, oldVirtualFolder);
+            for (FileItem d : descendants) {
+                if (d.getPath().equals(oldVirtualFolder)) {
+                    d.setPath(newVirtualFolder);
+                } else if (d.getPath().startsWith(oldVirtualFolder + "/")) {
+                    String sub = d.getPath().substring(oldVirtualFolder.length());
+                    d.setPath(newVirtualFolder + sub);
+                }
+                d.setUpdatedAt(LocalDateTime.now());
+                fileItemRepository.save(d);
+            }
+        }
+
         activityService.log(user, "RENAME", cleanName, "Renamed from '" + oldName + "' to '" + cleanName + "'");
         return FileItemDTO.fromEntity(saved);
     }
@@ -443,9 +513,43 @@ public class FileStorageService {
         FileItem item = getFileItem(user, fileId);
         String oldPath = item.getPath();
         String normalizedTarget = normalizeVirtualPath(targetPath);
+        if (oldPath.equals(normalizedTarget)) {
+            return FileItemDTO.fromEntity(item);
+        }
+
+        Optional<FileItem> existing = fileItemRepository.findByOwnerAndPathAndNameAndIsTrashedFalse(user, normalizedTarget, item.getName());
+        if (existing.isPresent()) {
+            throw new IllegalArgumentException("An item with name '" + item.getName() + "' already exists in target destination.");
+        }
+
+        if (item.isDirectory()) {
+            String folderFullPath = (oldPath.equals("/") ? "" : oldPath) + "/" + item.getName();
+            if (normalizedTarget.equals(folderFullPath) || normalizedTarget.startsWith(folderFullPath + "/")) {
+                throw new IllegalArgumentException("Cannot move a folder into itself or its own subfolder.");
+            }
+        }
+
+        String oldVirtualFolder = (oldPath.equals("/") ? "" : oldPath) + "/" + item.getName();
+        String newVirtualFolder = (normalizedTarget.equals("/") ? "" : normalizedTarget) + "/" + item.getName();
+
         item.setPath(normalizedTarget);
         item.setUpdatedAt(LocalDateTime.now());
         FileItem saved = fileItemRepository.save(item);
+
+        if (item.isDirectory()) {
+            List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, oldVirtualFolder);
+            for (FileItem d : descendants) {
+                if (d.getPath().equals(oldVirtualFolder)) {
+                    d.setPath(newVirtualFolder);
+                } else if (d.getPath().startsWith(oldVirtualFolder + "/")) {
+                    String sub = d.getPath().substring(oldVirtualFolder.length());
+                    d.setPath(newVirtualFolder + sub);
+                }
+                d.setUpdatedAt(LocalDateTime.now());
+                fileItemRepository.save(d);
+            }
+        }
+
         activityService.log(user, "MOVE", item.getName(), "Moved from " + oldPath + " to " + normalizedTarget);
         return FileItemDTO.fromEntity(saved);
     }
@@ -467,6 +571,20 @@ public class FileStorageService {
         item.setOriginalPath(item.getPath());
         item.setTrashedAt(LocalDateTime.now());
         fileItemRepository.save(item);
+
+        if (item.isDirectory()) {
+            String folderVirtualPath = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + item.getName();
+            List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
+            for (FileItem d : descendants) {
+                if (d.getPath().equals(folderVirtualPath) || d.getPath().startsWith(folderVirtualPath + "/")) {
+                    d.setTrashed(true);
+                    d.setOriginalPath(d.getPath());
+                    d.setTrashedAt(LocalDateTime.now());
+                    fileItemRepository.save(d);
+                }
+            }
+        }
+
         activityService.log(user, "TRASH", item.getName(), "Moved to Recycle Bin");
     }
 
@@ -480,6 +598,22 @@ public class FileStorageService {
         }
         item.setTrashedAt(null);
         fileItemRepository.save(item);
+
+        if (item.isDirectory()) {
+            String folderVirtualPath = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + item.getName();
+            List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
+            for (FileItem d : descendants) {
+                if (d.getPath().equals(folderVirtualPath) || d.getPath().startsWith(folderVirtualPath + "/")) {
+                    d.setTrashed(false);
+                    if (StringUtils.hasText(d.getOriginalPath())) {
+                        d.setPath(d.getOriginalPath());
+                    }
+                    d.setTrashedAt(null);
+                    fileItemRepository.save(d);
+                }
+            }
+        }
+
         activityService.log(user, "RESTORE", item.getName(), "Restored from Recycle Bin");
     }
 
@@ -536,7 +670,10 @@ public class FileStorageService {
 
         try (ZipOutputStream zos = new ZipOutputStream(out)) {
             String folderVirtualPath = (folder.getPath().equals("/") ? "" : folder.getPath()) + "/" + folder.getName();
-            List<FileItem> allDescendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
+            List<FileItem> rawDescendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
+            List<FileItem> allDescendants = rawDescendants.stream()
+                    .filter(item -> item.getPath().equals(folderVirtualPath) || item.getPath().startsWith(folderVirtualPath + "/"))
+                    .toList();
 
             for (FileItem item : allDescendants) {
                 if (item.isTrashed()) continue;

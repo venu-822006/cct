@@ -11,3 +11,6 @@ storage_drive/
 apache-maven-3.9.6/
 audit.log
 .vite/
+*.args
+backend/*.args
+*.log

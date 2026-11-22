@@ -2,6 +2,7 @@ package com.clouddrive.config;
 
 import com.clouddrive.security.JwtAuthenticationFilter;
 import com.clouddrive.security.UserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,10 +21,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -33,6 +36,12 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${app.security.cors.allowed-origins:*}")
+    private String allowedOrigins;
+
+    @Value("${spring.h2.console.enabled:false}")
+    private boolean h2ConsoleEnabled;
 
     public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
@@ -66,15 +75,19 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.png", "/logo.png", "/*.js", "/*.css", "/manifest.json").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/share/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                            .requestMatchers("/", "/index.html", "/assets/**", "/favicon.png", "/logo.png", "/*.js", "/*.css", "/manifest.json").permitAll()
+                            .requestMatchers("/api/auth/**").permitAll()
+                            .requestMatchers("/api/share/info/**", "/api/share/download/**", "/api/share/download-folder/**").permitAll()
+                            .requestMatchers("/error").permitAll();
+
+                    if (h2ConsoleEnabled) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                    }
+
+                    auth.anyRequest().authenticated();
+                })
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -85,7 +98,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        if (StringUtils.hasText(allowedOrigins) && !allowedOrigins.trim().equals("*")) {
+            List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .toList();
+            configuration.setAllowedOriginPatterns(origins);
+        } else {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        }
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Content-Disposition", "Authorization"));

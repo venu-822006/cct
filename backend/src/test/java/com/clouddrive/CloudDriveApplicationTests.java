@@ -283,4 +283,97 @@ class CloudDriveApplicationTests {
         rateLimitingService.reset(testIp);
         assertTrue(rateLimitingService.allowLogin(testIp), "Attempt after reset should be allowed");
     }
+
+    @Test
+    void testPathTraversalBlocked() {
+        String u = "sec_" + uid();
+        RegisterRequest req = new RegisterRequest();
+        req.setUsername(u);
+        req.setEmail(u + "@test.com");
+        req.setPassword("pass1234");
+        authService.register(req);
+        User user = authService.getUserByUsername(u);
+
+        // Relative path traversal in folder name
+        assertThrows(SecurityException.class, () ->
+                fileStorageService.createFolder(user, "/", "../escape"));
+
+        // Path traversal in virtual path
+        assertThrows(SecurityException.class, () ->
+                fileStorageService.createFolder(user, "/../../etc", "folder"));
+
+        // Path traversal in blank file
+        assertThrows(SecurityException.class, () ->
+                fileStorageService.createBlankFile(user, "/", "../evil.txt", "content"));
+    }
+
+    @Test
+    void testFolderZipIsolation() throws Exception {
+        String u = "iso_" + uid();
+        RegisterRequest req = new RegisterRequest();
+        req.setUsername(u);
+        req.setEmail(u + "@test.com");
+        req.setPassword("pass1234");
+        authService.register(req);
+        User user = authService.getUserByUsername(u);
+
+        // Create target folder: /Projects
+        FileItemDTO targetFolder = fileStorageService.createFolder(user, "/", "Projects");
+        fileStorageService.createBlankFile(user, "/Projects", "public_doc.txt", "Legitimate file");
+
+        // Create sibling folder: /Projects-Secret
+        fileStorageService.createFolder(user, "/", "Projects-Secret");
+        fileStorageService.createBlankFile(user, "/Projects-Secret", "secret_passwords.txt", "CONFIDENTIAL");
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        fileStorageService.streamFolderAsZip(user, targetFolder.getId(), baos);
+
+        // Read generated ZIP entries
+        java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(baos.toByteArray()));
+        java.util.zip.ZipEntry entry;
+        boolean foundPublic = false;
+        boolean leakedSecret = false;
+
+        while ((entry = zis.getNextEntry()) != null) {
+            if (entry.getName().contains("public_doc.txt")) foundPublic = true;
+            if (entry.getName().contains("secret_passwords.txt") || entry.getName().contains("Projects-Secret")) {
+                leakedSecret = true;
+            }
+        }
+
+        assertTrue(foundPublic, "ZIP archive must include public_doc.txt from inside the folder");
+        assertFalse(leakedSecret, "ZIP archive must NOT leak files from sibling folder /Projects-Secret");
+    }
+
+    @Test
+    void testFolderRenameAndMoveRecursivelyUpdatesDescendants() {
+        String u = "tree_" + uid();
+        RegisterRequest req = new RegisterRequest();
+        req.setUsername(u);
+        req.setEmail(u + "@test.com");
+        req.setPassword("pass1234");
+        authService.register(req);
+        User user = authService.getUserByUsername(u);
+
+        // 1. Create Folder /Alpha and child /Alpha/child.txt
+        FileItemDTO alpha = fileStorageService.createFolder(user, "/", "Alpha");
+        fileStorageService.createBlankFile(user, "/Alpha", "child.txt", "Content");
+
+        // 2. Rename /Alpha -> /Beta
+        fileStorageService.rename(user, alpha.getId(), "Beta");
+
+        // 3. Child's path must now be /Beta
+        List<FileItemDTO> betaFiles = fileStorageService.listFiles(user, "/Beta");
+        assertTrue(betaFiles.stream().anyMatch(f -> f.getName().equals("child.txt")),
+                "Renaming folder must recursively update child's path to /Beta");
+
+        // 4. Create subfolder /Beta/Sub and move it to /
+        FileItemDTO sub = fileStorageService.createFolder(user, "/Beta", "Sub");
+        fileStorageService.createBlankFile(user, "/Beta/Sub", "deep.txt", "Deep content");
+        fileStorageService.move(user, sub.getId(), "/");
+
+        List<FileItemDTO> movedDeepFiles = fileStorageService.listFiles(user, "/Sub");
+        assertTrue(movedDeepFiles.stream().anyMatch(f -> f.getName().equals("deep.txt")),
+                "Moving folder must recursively update nested children's paths to /Sub");
+    }
 }

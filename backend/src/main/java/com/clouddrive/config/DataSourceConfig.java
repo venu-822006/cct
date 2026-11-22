@@ -14,16 +14,16 @@ import java.net.URI;
 @Configuration
 public class DataSourceConfig {
 
-    @Value("${SPRING_DATASOURCE_URL:${DATABASE_URL:}}")
+    @Value("${spring.datasource.url:${SPRING_DATASOURCE_URL:${DATABASE_URL:}}}")
     private String rawUrl;
 
-    @Value("${SPRING_DATASOURCE_USERNAME:}")
+    @Value("${spring.datasource.username:${SPRING_DATASOURCE_USERNAME:}}")
     private String username;
 
-    @Value("${SPRING_DATASOURCE_PASSWORD:}")
+    @Value("${spring.datasource.password:${SPRING_DATASOURCE_PASSWORD:}}")
     private String password;
 
-    @Value("${SPRING_DATASOURCE_DRIVER:}")
+    @Value("${spring.datasource.driver-class-name:${SPRING_DATASOURCE_DRIVER:}}")
     private String driverClass;
 
     @Bean
