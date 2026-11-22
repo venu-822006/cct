@@ -245,5 +245,13 @@
 - [x] Authored complete step-by-step production deployment guide `docs/GOOGLE_CLOUD_DEPLOYMENT_GUIDE.md`.
 - [x] Executed full test suite (`bun test` -> 9/9 passing, `mvn clean package` -> 8/8 passing, BUILD SUCCESS).
 
+## 18. Fix Cloud Shell Web Preview Redirect & Proxy Forwarding
+- [x] Removed `server.forward-headers-strategy: framework` from `application.yml` and `application-gcloud.yml` to prevent Cloud Shell reverse proxy from rewriting `request.getServerName()` to `ssh.cloud.google.com`.
+- [x] Configured `HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)` in `SecurityConfig.java` so unauthenticated requests always return HTTP 401 instead of Spring default redirects.
+- [x] Added `credentials: "include"` in `springApi.ts` so browser AJAX requests forward Cloud Shell session cookies and avoid triggering Google re-auth redirects.
+- [x] Rebuilt frontend bundle (`index-CxBbdSeE.js`) and refreshed backend static assets.
+- [x] Verified full test suite (`bun test` -> 9/9 pass, `mvn test` -> 9/9 pass, BUILD SUCCESS).
+
+
 
 

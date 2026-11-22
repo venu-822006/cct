@@ -34,6 +34,7 @@ export async function request(endpoint: string, options: RequestInit = {}) {
   try {
     response = await fetch(endpoint, {
       ...options,
+      credentials: "include",
       headers,
     });
   } catch (err: any) {
