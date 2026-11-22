@@ -353,6 +353,17 @@
 - [x] Verified frontend tests (`bun test`): 9/9 passing.
 - [x] Merged `production-hardening` branch into `main` and pushed to GitHub `origin/main` (`fb42bce`).
 
+## 30. Google Cloud Shell Port 8080 Backend Disconnection Resolution
+- [x] Diagnosed root cause of "Unable to connect to the backend server. Please verify that the application is running on port 8080 in Cloud Shell.":
+  - Spring Boot backend had stopped when the Cloud Shell terminal session was closed or disconnected, leaving port 8080 without a listening process and causing frontend `fetch()` to fail with network error.
+- [x] Updated Cloud Shell environment to latest commit `e8abd52` with official Google reCAPTCHA post-login verification (`git fetch origin main && git reset --hard origin/main`).
+- [x] Rebuilt frontend production bundle and packaged Spring Boot JAR inside Cloud Shell.
+- [x] Launched Spring Boot application in background daemon mode (`bash deploy-cloudshell.sh -d`) with PID tracking (`app.pid`), ensuring persistence across terminal sessions.
+- [x] Verified port 8080 listening via `fuser 8080/tcp` (PID 3752) and verified HTTP 401 on `curl -I http://localhost:8080/api/auth/me`.
+- [x] Verified Cloud Shell web preview (`https://8080-cs-936674397252-default.cs-asia-southeast1-yelo.cloudshell.dev/?authuser=0`): error banner eliminated, clean sign-in interface displayed and fully connected to the backend.
+- [x] Verified test suites: 12/12 backend tests pass (`mvnw.cmd test`, BUILD SUCCESS) and 9/9 frontend tests pass (`bun test`).
+
+
 
 
 
