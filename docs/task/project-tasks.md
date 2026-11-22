@@ -306,6 +306,17 @@
 - [x] Rebuilt frontend production bundle (`index-UO9PD8Fo.js`) and refreshed Spring Boot static resources.
 - [x] Verified full test suite (`bun test` -> 9/9 pass, `mvn test` -> 9/9 pass, BUILD SUCCESS).
 
+## 26. Cloud PostgreSQL Driver & Universal Database URL Auto-Detection
+- [x] Fixed `Cannot load driver class: org.postgresql.Driver` by adding `org.postgresql:postgresql` runtime dependency to `backend/pom.xml`.
+- [x] Created `DataSourceConfig.java` to automatically parse and support:
+  - Standard JDBC URLs (`jdbc:postgresql:...`, `jdbc:mysql:...`, `jdbc:h2:...`)
+  - Cloud provider URI formats (`postgres://user:password@host:port/dbname` or `postgresql://...` from Render / Supabase / Neon)
+  - Automatic extraction of credentials and host parameters
+  - Automatic driver class binding (`org.postgresql.Driver`)
+- [x] Removed hardcoded H2 dialect in `application.yml` and `application-gcloud.yml` to let Hibernate 6 auto-detect PostgreSQL dialect.
+- [x] Verified tests pass: `mvn test` 9/9 pass (BUILD SUCCESS), `bun test` 9/9 pass.
+
+
 
 
 
