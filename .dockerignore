@@ -6,3 +6,11 @@ dist
 .gitignore
 audit.log
 *.log
+backend/target
+backend/data
+data/
+storage_root/
+test-storage/
+.idea
+.vscode
+.gemini

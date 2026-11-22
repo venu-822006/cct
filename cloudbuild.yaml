@@ -16,7 +16,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive'
 
-  # 3. Deploy to Cloud Run
+  # 3. Deploy to Google Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -33,17 +33,15 @@ steps:
       - '--port'
       - '8080'
       - '--memory'
-      - '512Mi'
+      - '1Gi'
       - '--cpu'
       - '1'
       - '--min-instances'
       - '0'
       - '--max-instances'
-      - '3'
+      - '5'
       - '--set-env-vars'
       - 'SPRING_PROFILES_ACTIVE=gcloud'
-      - '--update-secrets'
-      - 'JWT_SECRET=cloud-drive-jwt-secret:latest'
 
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:$COMMIT_SHA'

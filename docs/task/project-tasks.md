@@ -226,4 +226,14 @@
 - [x] Updated git file mode permissions (`chmod +x`) for `deploy-cloudshell.sh` and `backend/mvnw`.
 - [x] Verified full build and test suites: `bun test` 9/9 pass, `mvn test` 8/8 pass (BUILD SUCCESS).
 
+## 17. Complete Google Cloud Platform (GCP) Deployment & Production Packaging
+- [x] Fixed Dockerfile JAR copying: added `<finalName>personal-cloud-drive</finalName>` in `backend/pom.xml` and targeted exact `personal-cloud-drive.jar` in `Dockerfile`.
+- [x] Hardened runtime container: created `/app/data` and `/app/storage_root` directories and defaulted `SPRING_PROFILES_ACTIVE=gcloud`.
+- [x] Optimized `.dockerignore` to prevent uploading heavy build artifacts (`backend/target`, `data`, `storage_root`) into Docker daemon and CI/CD pipelines.
+- [x] Streamlined `cloudbuild.yaml`: increased Cloud Run RAM to `1Gi`, scaled to 5 max instances, and removed hardcoded Secret Manager blockers.
+- [x] Authored turnkey automated script `deploy-gcloud.sh` with full support for Google Cloud Run, Artifact Registry, Cloud Build, and Google Cloud Storage (GCS FUSE) volume mounts.
+- [x] Authored complete step-by-step production deployment guide `docs/GOOGLE_CLOUD_DEPLOYMENT_GUIDE.md`.
+- [x] Executed full test suite (`bun test` -> 9/9 passing, `mvn clean package` -> 8/8 passing, BUILD SUCCESS).
+
+
 
