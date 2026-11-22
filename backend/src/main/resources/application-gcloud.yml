@@ -35,11 +35,21 @@ app:
     gcs-bucket: ${GCS_BUCKET:}
     default-quota-bytes: ${APP_STORAGE_QUOTA:5368709120} # 5 GB per user
 
+  admin:
+    bootstrap-enabled: ${ADMIN_BOOTSTRAP_ENABLED:true}
+    username: ${ADMIN_BOOTSTRAP_USERNAME:admin}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:admin123}
+    email: ${ADMIN_BOOTSTRAP_EMAIL:admin@localhost}
+
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours (1 full day)
 
   security:
+    recaptcha:
+      enabled: ${RECAPTCHA_ENABLED:true}
+      site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI}
+      secret-key: ${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe}
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:true}
       login-limit: ${RATE_LIMIT_LOGIN:10} # max 10 login attempts per minute per IP

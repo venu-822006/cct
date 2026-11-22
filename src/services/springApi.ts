@@ -30,12 +30,13 @@ export async function request(endpoint: string, options: RequestInit = {}) {
     headers.set("Content-Type", "application/json");
   }
 
-  // Preserve Cloud Shell authuser query parameter to prevent proxy authentication redirects
+  // Preserve or default Cloud Shell authuser query parameter to prevent proxy authentication redirects
   let targetUrl = endpoint;
-  if (typeof window !== "undefined" && window.location && window.location.search) {
+  if (typeof window !== "undefined" && window.location) {
     try {
-      const currentParams = new URLSearchParams(window.location.search);
-      const authUser = currentParams.get("authuser");
+      const isCloudShell = window.location.hostname.includes(".cloudshell.dev");
+      const currentParams = new URLSearchParams(window.location.search || "");
+      const authUser = currentParams.get("authuser") || (isCloudShell ? "0" : null);
       if (authUser) {
         const parsed = new URL(endpoint, window.location.origin);
         if (!parsed.searchParams.has("authuser")) {
@@ -56,8 +57,15 @@ export async function request(endpoint: string, options: RequestInit = {}) {
       headers,
     });
   } catch (err: any) {
+    const isCloudShell =
+      typeof window !== "undefined" && window.location && window.location.hostname.includes(".cloudshell.dev");
+    if (isCloudShell) {
+      throw new Error(
+        "Unable to connect to the backend server. Cloud Shell proxy requires active session (?authuser=0). Please click 'Web Preview' -> 'Preview on port 8080' in Cloud Shell, or verify port 8080 is active."
+      );
+    }
     throw new Error(
-      "Unable to connect to the backend server. Please verify that the application is running on port 8080 in Cloud Shell."
+      "Unable to connect to the backend server. Please verify that the application is running on port 8080."
     );
   }
 

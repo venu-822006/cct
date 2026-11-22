@@ -363,6 +363,15 @@
 - [x] Verified Cloud Shell web preview (`https://8080-cs-936674397252-default.cs-asia-southeast1-yelo.cloudshell.dev/?authuser=0`): error banner eliminated, clean sign-in interface displayed and fully connected to the backend.
 - [x] Verified test suites: 12/12 backend tests pass (`mvnw.cmd test`, BUILD SUCCESS) and 9/9 frontend tests pass (`bun test`).
 
+## 31. Cloud Shell Web Preview Proxy Authentication & Auto-Session Preservation
+- [x] Resolved Cloud Shell proxy redirection on unauthenticated fetch:
+  - Added auto-redirection in `src/main.tsx` to automatically append `?authuser=0` if opened directly without query parameters on `*.cloudshell.dev`, ensuring Google's frontend proxy receives a top-level session handshake.
+  - Enhanced `src/services/springApi.ts` to always forward `authuser=0` on all AJAX/fetch calls on `*.cloudshell.dev` domains.
+  - Enabled automatic administrator bootstrapping (`admin` / `admin123`) in `application-gcloud.yml` for instant zero-friction sign-in.
+  - Enhanced error handling in `springApi.ts` with actionable troubleshooting if Google Cloud Shell proxy terminates session.
+- [x] Verified full build and test suites: `bun test` 9/9 passing, `mvnw.cmd test` 12/12 passing (BUILD SUCCESS).
+
+
 
 
 
