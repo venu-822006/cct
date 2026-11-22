@@ -36,6 +36,29 @@ public class AuthService {
     @Value("${app.storage.default-quota-bytes}")
     private long defaultQuotaBytes;
 
+    @Value("${app.recaptcha.secret:}")
+    private String recaptchaSecret;
+
+    public boolean verifyRecaptcha(String token) {
+        if (recaptchaSecret == null || recaptchaSecret.isBlank()) {
+            return true;
+        }
+        if ("6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe".equals(recaptchaSecret)) {
+            return true;
+        }
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String url = "https://www.google.com/recaptcha/api/siteverify?secret=" + recaptchaSecret + "&response=" + token;
+            java.util.Map response = restTemplate.postForObject(url, null, java.util.Map.class);
+            return response != null && Boolean.TRUE.equals(response.get("success"));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider tokenProvider,
@@ -50,6 +73,9 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (!verifyRecaptcha(request.getRecaptchaToken())) {
+            throw new IllegalArgumentException("reCAPTCHA verification failed. Please try again.");
+        }
         String cleanUsername = request.getUsername() != null ? request.getUsername().trim() : "";
         String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
 
@@ -108,6 +134,9 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        if (!verifyRecaptcha(request.getRecaptchaToken())) {
+            throw new IllegalArgumentException("reCAPTCHA verification failed. Please try again.");
+        }
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );

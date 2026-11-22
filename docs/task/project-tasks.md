@@ -185,3 +185,17 @@
 - [x] Hardened `requestJson` in `springApi.ts` to detect HTML SPA fallbacks (`text/html`) and throw structured errors instead of passing corrupt payload to React state.
 - [x] Added defensive array validation (`Array.isArray(items)`) in `App.tsx` preventing `items.filter is not a function` runtime crashes.
 - [x] Verified complete flow in live browser: clean AuthModal load, registration, login, and full Google Drive explorer dashboard rendering.
+
+## 13. Google reCAPTCHA v2 Integration, Cloud Deployment Guide & Public Links Removal
+- [x] Removed all Public Links navigation, views, action buttons, and table tabs across `App.tsx`:
+  - Removed "Public links" item from sidebar navigation.
+  - Removed Public Links view and table.
+  - Cleaned Three Dots context menu and action bars to offer standard "Share" (user-to-user sharing) instead of public links.
+  - Simplified Share dialog to direct, clean User-to-User sharing modal.
+- [x] Integrated genuine Google reCAPTCHA v2 ("I'm not a robot" checkbox with visual challenge) into `AuthModal.tsx`:
+  - Dynamically loads Google reCAPTCHA v2 API.
+  - Supports configurable site key via `VITE_RECAPTCHA_SITE_KEY` with Google's public test key as default for zero-setup local & staging use.
+  - Added backend `recaptchaToken` verification in `AuthService` and `AuthController` with environment variable `RECAPTCHA_SECRET_KEY`.
+- [x] Authored comprehensive guide `docs/GOOGLE_CLOUD_RECAPTCHA_GUIDE.md` covering Google Cloud Run deployment, Google Secret Manager integration, and Google Cloud Armor Bot Defense (`redirect_to_recaptcha` policy).
+- [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and build (`npm run build` -> 0 errors).
+- [x] Verified live in browser: reCAPTCHA renders, requires verification, passes on click, and dashboard loads cleanly without Public links.

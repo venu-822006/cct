@@ -119,7 +119,7 @@ export function App() {
 
   // Navigation & View State
   const [currentView, setCurrentView] = useState<
-    "drive" | "recent" | "starred" | "shared_with_me" | "shares" | "analytics" | "trash"
+    "drive" | "recent" | "starred" | "shared_with_me" | "analytics" | "trash"
   >("drive");
   const [currentPath, setCurrentPath] = useState<string>("/");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -135,7 +135,6 @@ export function App() {
   const [items, setItems] = useState<DriveItem[]>([]);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [breakdown, setBreakdown] = useState<StorageBreakdown | null>(null);
-  const [shares, setShares] = useState<ShareInfo[]>([]);
   const [sharedWithMe, setSharedWithMe] = useState<UserShareItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorAlert, setErrorAlert] = useState<string | null>(null);
@@ -155,9 +154,6 @@ export function App() {
   const [moveTargetPath, setMoveTargetPath] = useState("");
 
   const [shareItemTarget, setShareItemTarget] = useState<DriveItem | null>(null);
-  const [shareTab, setShareTab] = useState<"public" | "user">("public");
-  const [shareExpiryHours, setShareExpiryHours] = useState<number>(24);
-  const [generatedShare, setGeneratedShare] = useState<ShareInfo | null>(null);
   const [shareTargetUsername, setShareTargetUsername] = useState("");
   const [sharePermission, setSharePermission] = useState<"VIEW" | "EDIT">("VIEW");
 
@@ -278,9 +274,6 @@ export function App() {
       } else if (currentView === "shared_with_me") {
         const list = await fetchSharedWithMe();
         setSharedWithMe(list);
-      } else if (currentView === "shares") {
-        const list = await fetchMyShares();
-        setShares(list);
       } else if (currentView === "analytics") {
         const b = await fetchStorageBreakdown();
         setBreakdown(b);
@@ -479,44 +472,11 @@ export function App() {
     }
   };
 
-  // Quick Public Share handler (under Three Dots option)
-  const handleOpenPublicShare = async (item: DriveItem) => {
-    setActiveMenuId(null);
-    setShareItemTarget(item);
-    setShareTab("public");
-    try {
-      const res = await createShareLink(item.id, shareExpiryHours);
-      setGeneratedShare(res);
-      const fullUrl = `${window.location.origin}/?share=${res.token}`;
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(fullUrl);
-        notifySuccess("Public link generated & copied to clipboard!");
-      } else {
-        notifySuccess("Public link generated!");
-      }
-    } catch (err: any) {
-      setGeneratedShare(null);
-      setErrorAlert(err.message || "Failed to generate public link");
-    }
-  };
-
   const handleOpenUserShare = (item: DriveItem) => {
     setActiveMenuId(null);
     setShareItemTarget(item);
-    setShareTab("user");
-    setGeneratedShare(null);
-  };
-
-  // Public Share
-  const handleGeneratePublicShare = async () => {
-    if (!shareItemTarget) return;
-    try {
-      const res = await createShareLink(shareItemTarget.id, shareExpiryHours);
-      setGeneratedShare(res);
-      notifySuccess("Public share link generated");
-    } catch (err: any) {
-      setErrorAlert(err.message);
-    }
+    setShareTargetUsername("");
+    setSharePermission("VIEW");
   };
 
   // User Share
@@ -544,24 +504,12 @@ export function App() {
       >
         {currentView !== "trash" ? (
           <>
-            {/* Public Link - Top Prominent Action under Three Dots */}
-            <button
-              onClick={() => handleOpenPublicShare(item)}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-[#c2e7ff]/30 dark:hover:bg-[#004a77]/30 text-[#0b57d0] dark:text-[#a8c7fa] font-semibold transition-colors cursor-pointer"
-            >
-              <Link2 className="w-4 h-4 shrink-0 text-[#0b57d0] dark:text-[#a8c7fa]" />
-              <div className="flex flex-col min-w-0">
-                <span className="leading-tight">Public link</span>
-                <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400 truncate">Generate & copy link</span>
-              </div>
-            </button>
-
             <button
               onClick={() => handleOpenUserShare(item)}
               className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
               <Share2 className="w-4 h-4 shrink-0 text-slate-500 dark:text-slate-400" />
-              <span>Share with user</span>
+              <span>Share</span>
             </button>
 
             <div className="my-1 border-t border-[#e0e2ec]/60 dark:border-[#3c4043]/60" />
@@ -1211,21 +1159,6 @@ export function App() {
 
               <button
                 onClick={() => {
-                  setCurrentView("shares");
-                  setSearchQuery("");
-                }}
-                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                  currentView === "shares"
-                    ? "theme-pill-active font-semibold"
-                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
-                }`}
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Public links</span>
-              </button>
-
-              <button
-                onClick={() => {
                   setCurrentView("trash");
                   setSearchQuery("");
                 }}
@@ -1344,7 +1277,6 @@ export function App() {
               {currentView === "recent" && <span className="text-xl font-normal theme-text-main font-sans">Recent</span>}
               {currentView === "starred" && <span className="text-xl font-normal theme-text-main font-sans">Starred</span>}
               {currentView === "shared_with_me" && <span className="text-xl font-normal theme-text-main font-sans">Shared with me</span>}
-              {currentView === "shares" && <span className="text-xl font-normal theme-text-main font-sans">Public links</span>}
               {currentView === "analytics" && <span className="text-xl font-normal theme-text-main font-sans">Storage</span>}
               {currentView === "trash" && <span className="text-xl font-normal theme-text-main font-sans">Trash</span>}
             </div>
@@ -1360,12 +1292,12 @@ export function App() {
                       onClick={() => {
                         const selectedId = Array.from(selectedIds)[0];
                         const item = items.find((i) => i.id === selectedId);
-                        if (item) handleOpenPublicShare(item);
+                        if (item) handleOpenUserShare(item);
                       }}
                       className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                      title="Get public link"
+                      title="Share"
                     >
-                      <Link2 className="w-4 h-4" />
+                      <Share2 className="w-4 h-4" />
                     </button>
                   )}
                   <button
@@ -1563,65 +1495,6 @@ export function App() {
             </div>
           )}
 
-          {/* VIEW: Public Shares */}
-          {currentView === "shares" && (
-            <div className="theme-bg-surface border theme-border rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full text-left text-sm">
-                <thead className="theme-bg-subtle border-b theme-border text-xs uppercase theme-text-muted font-semibold">
-                  <tr>
-                    <th className="py-3 px-4">File Name</th>
-                    <th className="py-3 px-4">Size</th>
-                    <th className="py-3 px-4">Expires</th>
-                    <th className="py-3 px-4">Downloads</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y theme-border-subtle">
-                  {(Array.isArray(shares) ? shares : []).map((share) => (
-                    <tr key={share.id} className="hover:theme-bg-hover transition-colors">
-                      <td className="py-3 px-4 font-semibold theme-text-main">{share.fileName}</td>
-                      <td className="py-3 px-4 theme-text-muted text-xs">{formatBytes(share.fileSize)}</td>
-                      <td className="py-3 px-4 text-xs theme-text-sub">
-                        {share.expiresAt ? new Date(share.expiresAt).toLocaleDateString() : "Never"}
-                      </td>
-                      <td className="py-3 px-4 text-xs font-mono text-emerald-400">{share.downloadCount}</td>
-                      <td className="py-3 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => {
-                            const fullUrl = `${window.location.origin}/?share=${share.token}`;
-                            navigator.clipboard.writeText(fullUrl);
-                            notifySuccess("Share link copied to clipboard!");
-                          }}
-                          className="p-1.5 rounded-lg theme-bg-subtle hover:theme-bg-hover theme-text-sub"
-                          title="Copy Link"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            await revokeShareLink(share.id);
-                            notifySuccess("Share link revoked");
-                            loadCurrentViewData();
-                          }}
-                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/30 text-red-400"
-                          title="Revoke Link"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {shares.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center theme-text-muted text-sm">
-                        No shared links
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
 
           {/* VIEW: Files (Grid & List) */}
           {["drive", "recent", "starred", "trash"].includes(currentView) && (
@@ -1829,11 +1702,11 @@ export function App() {
                                         <Star className="w-3.5 h-3.5 fill-current" />
                                       </button>
                                       <button
-                                        onClick={() => handleOpenPublicShare(item)}
-                                        className="p-1 rounded hover:bg-[#c2e7ff]/30 text-[#0b57d0] dark:text-[#a8c7fa]"
-                                        title="Public link"
+                                        onClick={() => handleOpenUserShare(item)}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="Share"
                                       >
-                                        <Link2 className="w-3.5 h-3.5" />
+                                        <Share2 className="w-3.5 h-3.5" />
                                       </button>
                                       <a
                                         href={getFileDownloadUrl(item.id)}
@@ -1944,11 +1817,11 @@ export function App() {
                                     <Star className="w-4 h-4 fill-current" />
                                   </button>
                                   <button
-                                    onClick={() => handleOpenPublicShare(item)}
-                                    className="p-1.5 rounded-full hover:bg-[#c2e7ff]/30 text-[#0b57d0] dark:text-[#a8c7fa]"
-                                    title="Public link"
+                                    onClick={() => handleOpenUserShare(item)}
+                                    className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                    title="Share"
                                   >
-                                    <Link2 className="w-4 h-4" />
+                                    <Share2 className="w-4 h-4" />
                                   </button>
                                   <a
                                     href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
@@ -2227,7 +2100,7 @@ export function App() {
         </div>
       )}
 
-      {/* MODAL: Share (Public link & User Share) */}
+      {/* MODAL: Share with User */}
       {shareItemTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="theme-bg-surface border theme-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -2238,162 +2111,36 @@ export function App() {
               </button>
             </div>
 
-            {/* Share Type Tabs */}
-            <div className="flex theme-bg-input p-1 rounded-xl mb-4 border theme-border-subtle">
-              <button
-                type="button"
-                onClick={() => setShareTab("public")}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  shareTab === "public" ? "theme-btn-primary shadow-sm" : "theme-text-muted hover:theme-text-main"
-                }`}
-              >
-                Public Link
-              </button>
-              <button
-                type="button"
-                onClick={() => setShareTab("user")}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  shareTab === "user" ? "theme-btn-primary shadow-sm" : "theme-text-muted hover:theme-text-main"
-                }`}
-              >
-                Share with User
-              </button>
-            </div>
-
-            {shareTab === "public" ? (
-              !generatedShare ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold theme-text-muted mb-1.5">Expiration</label>
-                    <select
-                      value={shareExpiryHours}
-                      onChange={(e) => setShareExpiryHours(Number(e.target.value))}
-                      className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
-                    >
-                      <option value={24} className="theme-bg-surface">Expires in 24 hours</option>
-                      <option value={168} className="theme-bg-surface">Expires in 7 days</option>
-                      <option value={720} className="theme-bg-surface">Expires in 30 days</option>
-                      <option value={0} className="theme-bg-surface">Never expires</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleGeneratePublicShare}
-                    className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl cursor-pointer shadow-md"
-                  >
-                    Create Link
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-3 theme-bg-input border theme-border rounded-xl">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-semibold theme-text-muted flex items-center gap-1.5">
-                        <Link2 className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
-                        Public Link
-                      </span>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                        Active
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 bg-white dark:bg-[#1e1f20] p-2.5 rounded-lg border theme-border-subtle">
-                      <p className="text-xs font-mono text-[#0b57d0] dark:text-[#a8c7fa] truncate select-all">
-                        {window.location.origin}/?share={generatedShare.token}
-                      </p>
-                      <button
-                        onClick={() => {
-                          const fullUrl = `${window.location.origin}/?share=${generatedShare.token}`;
-                          navigator.clipboard.writeText(fullUrl);
-                          notifySuccess("Public link copied to clipboard!");
-                        }}
-                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] shrink-0"
-                        title="Copy link"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        const fullUrl = `${window.location.origin}/?share=${generatedShare.token}`;
-                        navigator.clipboard.writeText(fullUrl);
-                        notifySuccess("Public link copied to clipboard!");
-                      }}
-                      className="flex-1 py-2.5 theme-btn-primary text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      <Copy className="w-4 h-4" />
-                      <span>Copy link</span>
-                    </button>
-                    <a
-                      href={`${window.location.origin}/?share=${generatedShare.token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2.5 rounded-xl border theme-border hover:theme-bg-hover theme-text-muted hover:theme-text-main transition-colors flex items-center justify-center"
-                      title="Open in new tab"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
-
-                  {/* Expiration Settings */}
-                  <div className="pt-2 border-t theme-border-subtle">
-                    <label className="block text-xs font-semibold theme-text-muted mb-1.5">Change Expiration</label>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={shareExpiryHours}
-                        onChange={(e) => setShareExpiryHours(Number(e.target.value))}
-                        className="flex-1 theme-bg-input border theme-border rounded-xl px-3 py-2 text-xs theme-text-main focus:outline-none"
-                      >
-                        <option value={24} className="theme-bg-surface">Expires in 24 hours</option>
-                        <option value={168} className="theme-bg-surface">Expires in 7 days</option>
-                        <option value={720} className="theme-bg-surface">Expires in 30 days</option>
-                        <option value={0} className="theme-bg-surface">Never expires</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleGeneratePublicShare}
-                        className="px-3 py-2 text-xs font-semibold rounded-xl border theme-border hover:theme-bg-hover theme-text-main transition-colors"
-                      >
-                        Update
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : (
-              /* User-to-User Share Form */
-              <form onSubmit={handleShareWithUser} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold theme-text-muted mb-1.5">Recipient</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Username"
-                    value={shareTargetUsername}
-                    onChange={(e) => setShareTargetUsername(e.target.value)}
-                    className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold theme-text-muted mb-1.5">Permission</label>
-                  <select
-                    value={sharePermission}
-                    onChange={(e) => setSharePermission(e.target.value as any)}
-                    className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
-                  >
-                    <option value="VIEW" className="theme-bg-surface">View & Download</option>
-                    <option value="EDIT" className="theme-bg-surface">View, Edit & Save</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl cursor-pointer shadow-md"
+            <form onSubmit={handleShareWithUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold theme-text-muted mb-1.5">Recipient Username</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter username to share with"
+                  value={shareTargetUsername}
+                  onChange={(e) => setShareTargetUsername(e.target.value)}
+                  className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold theme-text-muted mb-1.5">Permission</label>
+                <select
+                  value={sharePermission}
+                  onChange={(e) => setSharePermission(e.target.value as any)}
+                  className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
                 >
-                  Share
-                </button>
-              </form>
-            )}
+                  <option value="VIEW" className="theme-bg-surface">View & Download</option>
+                  <option value="EDIT" className="theme-bg-surface">View, Edit & Save</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl cursor-pointer shadow-md"
+              >
+                Share
+              </button>
+            </form>
           </div>
         </div>
       )}

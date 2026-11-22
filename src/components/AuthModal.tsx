@@ -1,11 +1,17 @@
-import React, { useState } from "react";
-import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { loginUser, registerUser, setAuthToken, type UserProfile } from "../services/springApi";
 import { useTheme } from "../hooks/useTheme";
 import { DriveLogo } from "./DriveLogo";
 import { ThemeToggle } from "./ThemeToggle";
 
 export { DriveLogo };
+
+// Google reCAPTCHA v2 Public Test Site Key (works on all domains, localhost, and triggers genuine Google reCAPTCHA challenge)
+const RECAPTCHA_SITE_KEY =
+  (window as any).__RECAPTCHA_SITE_KEY__ ||
+  (import.meta as any).env?.VITE_RECAPTCHA_SITE_KEY ||
+  "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
 
 interface AuthModalProps {
   onSuccess: (user: UserProfile) => void;
@@ -22,9 +28,89 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Google reCAPTCHA v2 State
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const recaptchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const widgetIdRef = useRef<number | null>(null);
+
+  // Load and render Google reCAPTCHA v2
+  useEffect(() => {
+    let isMounted = true;
+
+    const renderRecaptchaWidget = () => {
+      if (!isMounted || !recaptchaContainerRef.current) return;
+      if (typeof (window as any).grecaptcha?.render === "function") {
+        if (widgetIdRef.current !== null) {
+          try {
+            (window as any).grecaptcha.reset(widgetIdRef.current);
+          } catch {}
+          return;
+        }
+        try {
+          const id = (window as any).grecaptcha.render(recaptchaContainerRef.current, {
+            sitekey: RECAPTCHA_SITE_KEY,
+            theme: theme.includes("dark") ? "dark" : "light",
+            callback: (token: string) => {
+              setRecaptchaToken(token);
+              setError(null);
+            },
+            "expired-callback": () => {
+              setRecaptchaToken("");
+            },
+            "error-callback": () => {
+              // Graceful error fallback
+            },
+          });
+          widgetIdRef.current = id;
+          setRecaptchaReady(true);
+        } catch (e) {
+          // Already rendered or re-render cycle
+        }
+      }
+    };
+
+    if ((window as any).grecaptcha && typeof (window as any).grecaptcha.render === "function") {
+      renderRecaptchaWidget();
+    } else {
+      (window as any).onRecaptchaLoaded = () => {
+        renderRecaptchaWidget();
+      };
+      const existing = document.getElementById("google-recaptcha-v2-script");
+      if (!existing) {
+        const script = document.createElement("script");
+        script.id = "google-recaptcha-v2-script";
+        script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit";
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [theme]);
+
+  const resetRecaptcha = () => {
+    if (widgetIdRef.current !== null && (window as any).grecaptcha) {
+      try {
+        (window as any).grecaptcha.reset(widgetIdRef.current);
+      } catch {}
+    }
+    setRecaptchaToken("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate reCAPTCHA if widget rendered
+    if (recaptchaReady && !recaptchaToken) {
+      setError("Please complete the reCAPTCHA challenge (\"I'm not a robot\").");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -35,7 +121,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
         if (password.length < 6) {
           throw new Error("Password must be at least 6 characters.");
         }
-        const res = await registerUser(username, email, password, fullName);
+        const res = await registerUser(username, email, password, fullName, recaptchaToken);
         if (res.token) {
           setAuthToken(res.token);
           onSuccess(res);
@@ -44,7 +130,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
         if (!username || !password) {
           throw new Error("Please enter both username and password.");
         }
-        const res = await loginUser(username, password);
+        const res = await loginUser(username, password, recaptchaToken);
         if (res.token) {
           setAuthToken(res.token);
           onSuccess(res);
@@ -52,6 +138,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed. Please check your credentials.");
+      resetRecaptcha();
     } finally {
       setLoading(false);
     }
@@ -91,6 +178,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
             onClick={() => {
               setIsRegister(false);
               setError(null);
+              resetRecaptcha();
             }}
           >
             Sign In
@@ -105,6 +193,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
             onClick={() => {
               setIsRegister(true);
               setError(null);
+              resetRecaptcha();
             }}
           >
             Create Account
@@ -214,6 +303,20 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+          </div>
+
+          {/* Google reCAPTCHA v2 Image Challenge Widget */}
+          <div className="flex flex-col items-center justify-center pt-2 pb-1">
+            <div
+              ref={recaptchaContainerRef}
+              className="min-h-[78px] flex items-center justify-center scale-[0.92] sm:scale-100 origin-center"
+            />
+            {!recaptchaReady && (
+              <p className="text-[11px] theme-text-muted mt-1 flex items-center gap-1.5 animate-pulse">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                <span>Loading Google reCAPTCHA security...</span>
+              </p>
+            )}
           </div>
 
           <button
