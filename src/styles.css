@@ -395,6 +395,13 @@
   box-sizing: border-box;
 }
 
+button {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 body {
   margin: 0;
   background-color: var(--app-bg);
