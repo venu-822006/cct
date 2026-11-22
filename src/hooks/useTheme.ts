@@ -18,6 +18,17 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    const isDark =
+      theme === "gdrive-dark" ||
+      theme === "indigo" ||
+      theme === "emerald" ||
+      theme === "ocean" ||
+      theme === "sunset";
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 

@@ -45,7 +45,11 @@ import {
   FilePlus,
   FolderDown,
   CheckSquare,
-  Square
+  Square,
+  ChevronDown,
+  HelpCircle,
+  SlidersHorizontal,
+  Info
 } from "lucide-react";
 
 import {
@@ -101,6 +105,7 @@ import {
 import { AuthModal } from "./components/AuthModal";
 import { useTheme } from "./hooks/useTheme";
 import { THEMES, THEME_CONFIGS } from "./constants";
+import { DriveLogo } from "./components/DriveLogo";
 
 export function App() {
   const [theme, setTheme] = useTheme();
@@ -308,7 +313,7 @@ export function App() {
       const fullName = newDocName.trim().endsWith(newDocExt)
         ? newDocName.trim()
         : newDocName.trim() + newDocExt;
-      const initialText = `# ${newDocName}\nCreated in Personal Cloud Drive on ${new Date().toLocaleDateString()}\n`;
+      const initialText = `# ${newDocName}\n`;
       const doc = await createBlankDoc(currentPath, fullName, initialText);
       setNewDocOpen(false);
       setNewDocName("");
@@ -585,26 +590,35 @@ export function App() {
 
   const getFileIcon = (item: DriveItem) => {
     if (item.directory) {
-      const colorStyle = item.color ? { color: item.color } : { color: "#fbbf24" };
-      return <Folder className="w-6 h-6 fill-current/20" style={colorStyle} />;
+      const colorStyle = item.color ? { color: item.color } : { color: "#5f6368" };
+      return <Folder className="w-5 h-5 fill-current/25" style={colorStyle} />;
     }
     const ext = item.extension.toLowerCase();
     if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) {
-      return <ImageIcon className="w-6 h-6 text-emerald-400" />;
+      return <ImageIcon className="w-5 h-5 text-red-500" />;
     }
     if (["mp4", "mov", "mkv", "webm"].includes(ext)) {
-      return <Film className="w-6 h-6 text-rose-400" />;
+      return <Film className="w-5 h-5 text-rose-500" />;
     }
     if (["mp3", "wav", "flac", "ogg"].includes(ext)) {
-      return <Music className="w-6 h-6 text-purple-400" />;
+      return <Music className="w-5 h-5 text-purple-500" />;
     }
-    if (["zip", "rar", "7z", "tar"].includes(ext)) {
-      return <Archive className="w-6 h-6 text-orange-400" />;
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) {
+      return <Archive className="w-5 h-5 text-amber-600" />;
+    }
+    if (["csv", "xlsx", "xls"].includes(ext)) {
+      return <FileText className="w-5 h-5 text-emerald-600" />;
+    }
+    if (["pptx", "ppt"].includes(ext)) {
+      return <FileText className="w-5 h-5 text-amber-500" />;
+    }
+    if (ext === "pdf") {
+      return <FileText className="w-5 h-5 text-red-600" />;
     }
     if (["js", "ts", "html", "css", "py", "java", "json", "xml", "sql", "sh"].includes(ext)) {
-      return <FileCode className="w-6 h-6 text-sky-400" />;
+      return <FileCode className="w-5 h-5 text-sky-600" />;
     }
-    return <FileText className="w-6 h-6 text-blue-400" />;
+    return <FileText className="w-5 h-5 text-[#0b57d0]" />;
   };
 
   // Preview click handler
@@ -634,29 +648,28 @@ export function App() {
   if (publicShareToken && publicShareInfo) {
     return (
       <div className="min-h-screen theme-bg-app flex flex-col items-center justify-center p-4 transition-colors">
-        <div className="w-full max-w-md theme-bg-surface border theme-border rounded-2xl p-8 text-center shadow-2xl">
-          <div className="w-16 h-16 rounded-2xl theme-pill-active flex items-center justify-center mx-auto mb-4">
-            <Cloud className="w-8 h-8 text-[var(--app-primary-light)]" />
+        <div className="w-full max-w-md theme-bg-surface border theme-border rounded-3xl p-8 text-center shadow-xl">
+          <div className="flex justify-center mb-4">
+            <DriveLogo className="w-12 h-12" />
           </div>
-          <h1 className="text-xl font-bold theme-text-main mb-2">Public Cloud Share</h1>
-          <p className="text-sm theme-text-muted mb-6">A file has been shared with you via Personal Cloud Drive</p>
+          <h1 className="text-xl font-medium theme-text-main mb-6">Drive</h1>
 
-          <div className="theme-bg-input p-4 rounded-xl border theme-border-subtle text-left mb-6">
-            <p className="text-xs theme-text-muted uppercase tracking-wider mb-1">File Name</p>
-            <p className="text-sm font-semibold theme-text-main truncate">{publicShareInfo.fileName}</p>
+          <div className="theme-bg-input p-4 rounded-2xl border theme-border-subtle text-left mb-6">
+            <p className="text-xs theme-text-muted mb-1">File</p>
+            <p className="text-sm font-medium theme-text-main truncate">{publicShareInfo.fileName}</p>
             <div className="flex justify-between items-center mt-3 pt-3 border-t theme-border-subtle text-xs theme-text-muted">
-              <span>Size: {formatBytes(publicShareInfo.fileSize)}</span>
-              <span>Downloads: {publicShareInfo.downloadCount}</span>
+              <span>{formatBytes(publicShareInfo.fileSize)}</span>
+              <span>{publicShareInfo.downloadCount} downloads</span>
             </div>
           </div>
 
           <a
             href={getPublicDownloadUrl(publicShareToken)}
             download
-            className="w-full py-3 theme-btn-primary font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+            className="w-full py-2.5 theme-btn-primary font-medium rounded-full flex items-center justify-center gap-2 transition-all cursor-pointer text-sm shadow-sm hover:shadow"
           >
-            <Download className="w-5 h-5" />
-            <span>Download File</span>
+            <Download className="w-4 h-4" />
+            <span>Download</span>
           </a>
         </div>
       </div>
@@ -692,9 +705,8 @@ export function App() {
       {/* Drag & Drop Overlay */}
       {isDragging && (
         <div className="fixed inset-0 bg-[var(--app-primary-soft)] backdrop-blur-sm border-4 border-dashed border-[var(--app-primary)] z-50 flex flex-col items-center justify-center pointer-events-none">
-          <Upload className="w-16 h-16 text-[var(--app-primary-light)] animate-bounce mb-4" />
-          <h2 className="text-2xl font-bold theme-text-main">Drop files to upload directly</h2>
-          <p className="theme-text-sub">Files will be stored in {currentPath}</p>
+          <Upload className="w-14 h-14 text-[var(--app-primary-light)] animate-bounce mb-3" />
+          <h2 className="text-xl font-medium theme-text-main">Drop files to upload</h2>
         </div>
       )}
 
@@ -715,51 +727,60 @@ export function App() {
       />
 
       {/* Top Header */}
-      <header className="h-16 border-b theme-border-subtle theme-bg-header backdrop-blur px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl theme-btn-primary flex items-center justify-center shadow-md">
-            <Cloud className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold theme-text-main text-base leading-tight">Personal Cloud Drive</h1>
-            <p className="text-[11px] theme-text-muted">Secure Cloud Storage</p>
-          </div>
+      <header className="h-16 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 transition-colors select-none theme-bg-app">
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => {
+              setCurrentView("drive");
+              setCurrentPath("/");
+              setSearchQuery("");
+            }}
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <DriveLogo className="w-9 h-9" />
+            <span className="font-medium text-xl tracking-tight theme-text-main font-sans">
+              Drive
+            </span>
+          </button>
         </div>
 
         {/* Global Search */}
-        <div className="w-96 relative">
-          <Search className="w-4 h-4 text-[var(--app-text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search files by name, type, or tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full theme-bg-input border theme-border rounded-xl pl-10 pr-4 py-2 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)] transition-colors"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-main">
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        <div className="flex-1 max-w-2xl mx-4 sm:mx-8">
+          <div className="relative flex items-center w-full h-12 rounded-full bg-[#edf2fc] dark:bg-[#282a2c] hover:bg-[#e9eef6] dark:hover:bg-[#333537] focus-within:bg-white dark:focus-within:bg-[#1e1f20] focus-within:shadow-md border border-transparent focus-within:border-[var(--app-border-focus)] transition-all px-4">
+            <Search className="w-5 h-5 text-[var(--app-text-muted)] shrink-0 mr-3" />
+            <input
+              type="text"
+              placeholder="Search in Drive"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main transition-colors ml-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* User Profile, Theme Switcher & Actions */}
-        <div className="flex items-center gap-3">
-          {/* Theme Switcher Button */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <div className="relative">
             <button
               onClick={() => setThemeMenuOpen(!themeMenuOpen)}
-              title="Change Color Theme"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl theme-bg-surface hover:theme-bg-hover border theme-border theme-text-sub hover:theme-text-main transition-colors cursor-pointer text-xs font-medium"
+              title="Change Theme"
+              className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-sub hover:theme-text-main transition-colors cursor-pointer"
             >
-              <Palette className="w-4 h-4 text-[var(--app-primary-light)]" />
-              <span className="hidden sm:inline">{THEME_CONFIGS[theme as keyof typeof THEME_CONFIGS]?.name || "Theme"}</span>
+              <Palette className="w-5 h-5" />
             </button>
 
             {themeMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 theme-bg-surface border theme-border rounded-xl shadow-2xl p-1.5 z-50 space-y-1 animate-fadeUp">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider theme-text-muted">
-                  Color Themes
+              <div className="absolute right-0 mt-2 w-52 theme-bg-surface border theme-border rounded-2xl shadow-xl p-1.5 z-50 space-y-1 animate-fadeUp">
+                <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider theme-text-muted">
+                  Themes
                 </div>
                 {THEMES.map((t) => {
                   const conf = THEME_CONFIGS[t as keyof typeof THEME_CONFIGS];
@@ -772,7 +793,7 @@ export function App() {
                         setTheme(t);
                         setThemeMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                         isSelected
                           ? "theme-pill-active font-semibold"
                           : "theme-text-sub hover:theme-text-main theme-bg-hover"
@@ -792,85 +813,91 @@ export function App() {
 
           <button
             onClick={() => setSettingsOpen(true)}
-            title="Account Settings"
-            className="p-2.5 rounded-xl theme-bg-surface hover:theme-bg-hover border theme-border theme-text-sub hover:theme-text-main transition-colors cursor-pointer"
+            title="Settings"
+            className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-sub hover:theme-text-main transition-colors cursor-pointer"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-5 h-5" />
           </button>
-          <div className="text-right">
-            <p className="text-sm font-semibold theme-text-main">{user.fullName || user.username}</p>
-            <p className="text-xs theme-text-muted font-mono">@{user.username}</p>
+
+          <div className="flex items-center gap-2 pl-2">
+            <div
+              className="w-9 h-9 rounded-full bg-[#0b57d0] text-white flex items-center justify-center font-medium text-sm shadow-xs select-none"
+              title={`${user.fullName || user.username} (@${user.username})`}
+            >
+              {(user.fullName || user.username).charAt(0).toUpperCase()}
+            </div>
+            <button
+              onClick={() => {
+                clearAuthToken();
+                setUser(null);
+              }}
+              title="Sign Out"
+              className="p-2 rounded-full hover:bg-red-500/10 hover:text-red-500 theme-text-muted transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => {
-              clearAuthToken();
-              setUser(null);
-            }}
-            title="Sign Out"
-            className="p-2.5 rounded-xl theme-bg-surface hover:bg-red-500/20 hover:text-red-400 border theme-border theme-text-sub transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
       {/* Main Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
-        <aside className="w-64 border-r theme-border-subtle theme-bg-sidebar p-4 flex flex-col justify-between shrink-0 transition-colors">
-          <div className="space-y-6">
+        <aside className="w-64 theme-bg-app px-4 pb-4 flex flex-col justify-between shrink-0 transition-colors">
+          <div className="space-y-4">
             {/* "+ New" Action Menu */}
-            <div className="relative">
+            <div className="relative pt-2">
               <button
                 onClick={() => setNewMenuOpen(!newMenuOpen)}
-                className="w-full py-2.5 px-4 theme-btn-primary font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                className="gdrive-new-btn h-14 px-6 rounded-2xl flex items-center gap-3 font-medium text-sm transition-all cursor-pointer shadow-md"
               >
-                <Plus className="w-4 h-4" />
-                <span>+ New</span>
+                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span className="font-semibold text-sm tracking-wide">New</span>
               </button>
 
               {newMenuOpen && (
-                <div className="absolute top-12 left-0 w-full theme-bg-surface border theme-border rounded-xl shadow-2xl p-1.5 z-40 space-y-1 animate-fadeUp">
+                <div className="absolute top-18 left-0 w-60 theme-bg-surface border theme-border rounded-2xl shadow-xl p-2 z-40 space-y-1 animate-fadeUp">
+                  <button
+                    onClick={() => {
+                      setNewMenuOpen(false);
+                      setNewFolderOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold theme-text-sub hover:theme-text-main theme-bg-hover transition-colors"
+                  >
+                    <FolderPlus className="w-4 h-4 text-amber-500" />
+                    <span>New folder</span>
+                  </button>
+                  <div className="border-t theme-border-subtle my-1" />
                   <button
                     onClick={() => {
                       setNewMenuOpen(false);
                       fileInputRef.current?.click();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold theme-text-sub theme-bg-hover hover:theme-text-main"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold theme-text-sub hover:theme-text-main theme-bg-hover transition-colors"
                   >
-                    <Upload className="w-4 h-4 text-[var(--app-primary-light)]" />
-                    <span>Upload Files</span>
+                    <Upload className="w-4 h-4 text-blue-500" />
+                    <span>File upload</span>
                   </button>
                   <button
                     onClick={() => {
                       setNewMenuOpen(false);
                       folderInputRef.current?.click();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold theme-text-sub theme-bg-hover hover:theme-text-main"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold theme-text-sub hover:theme-text-main theme-bg-hover transition-colors"
                   >
-                    <Folder className="w-4 h-4 text-emerald-400" />
-                    <span>Upload Folder</span>
+                    <Folder className="w-4 h-4 text-emerald-500" />
+                    <span>Folder upload</span>
                   </button>
                   <div className="border-t theme-border-subtle my-1" />
                   <button
                     onClick={() => {
                       setNewMenuOpen(false);
-                      setNewFolderOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold theme-text-sub theme-bg-hover hover:theme-text-main"
-                  >
-                    <FolderPlus className="w-4 h-4 text-amber-400" />
-                    <span>New Folder</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNewMenuOpen(false);
                       setNewDocOpen(true);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold theme-text-sub theme-bg-hover hover:theme-text-main"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold theme-text-sub hover:theme-text-main theme-bg-hover transition-colors"
                   >
-                    <FilePlus className="w-4 h-4 text-sky-400" />
-                    <span>New Document</span>
+                    <FilePlus className="w-4 h-4 text-blue-600" />
+                    <span>New document</span>
                   </button>
                 </div>
               )}
@@ -883,10 +910,10 @@ export function App() {
                   setCurrentView("drive");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "drive"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <HardDrive className="w-4 h-4" />
@@ -898,14 +925,14 @@ export function App() {
                   setCurrentView("shared_with_me");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "shared_with_me"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>Shared with Me</span>
+                <span>Shared with me</span>
               </button>
 
               <button
@@ -913,10 +940,10 @@ export function App() {
                   setCurrentView("recent");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "recent"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <Clock className="w-4 h-4" />
@@ -928,10 +955,10 @@ export function App() {
                   setCurrentView("starred");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "starred"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <Star className="w-4 h-4" />
@@ -943,44 +970,14 @@ export function App() {
                   setCurrentView("shares");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "shares"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <Share2 className="w-4 h-4" />
-                <span>Public Links</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setCurrentView("analytics");
-                  setSearchQuery("");
-                }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  currentView === "analytics"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
-                }`}
-              >
-                <PieChart className="w-4 h-4" />
-                <span>Storage Analytics</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setCurrentView("activity");
-                  setSearchQuery("");
-                }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  currentView === "activity"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
-                }`}
-              >
-                <Activity className="w-4 h-4" />
-                <span>Activity Log</span>
+                <span>Public links</span>
               </button>
 
               <button
@@ -988,42 +985,79 @@ export function App() {
                   setCurrentView("trash");
                   setSearchQuery("");
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                   currentView === "trash"
-                    ? "theme-pill-active font-semibold shadow-sm"
-                    : "theme-text-muted hover:theme-text-main theme-bg-hover"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
                 }`}
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Trash</span>
+              </button>
+
+              <div className="border-t theme-border-subtle my-2" />
+
+              <button
+                onClick={() => {
+                  setCurrentView("analytics");
+                  setSearchQuery("");
+                }}
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
+                  currentView === "analytics"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
+                }`}
+              >
+                <PieChart className="w-4 h-4" />
+                <span>Storage</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setCurrentView("activity");
+                  setSearchQuery("");
+                }}
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
+                  currentView === "activity"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
+                }`}
+              >
+                <Activity className="w-4 h-4" />
+                <span>Activity</span>
               </button>
             </nav>
           </div>
 
           {/* Storage Quota Card */}
           {quota && (
-            <div className="theme-bg-surface border theme-border rounded-xl p-3.5 shadow-sm">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="theme-text-muted">Storage Used</span>
-                <span className="font-semibold theme-text-main">{quota.usedPercentage.toFixed(1)}%</span>
+            <div className="px-3 py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Cloud className="w-4 h-4 theme-text-sub" />
+                <span className="text-sm font-medium theme-text-main">Storage</span>
               </div>
-              <div className="w-full theme-bg-input rounded-full h-2 overflow-hidden border theme-border-subtle mb-2">
+              <div className="w-full bg-[#e0e2ec] dark:bg-[#3c4043] rounded-full h-1 overflow-hidden mb-2">
                 <div
-                  className={`h-full transition-all rounded-full ${
-                    quota.usedPercentage > 85 ? "bg-red-500" : "bg-[var(--app-primary)]"
-                  }`}
+                  className="h-full bg-[#0b57d0] dark:bg-[#a8c7fa] rounded-full transition-all"
                   style={{ width: `${Math.min(quota.usedPercentage, 100)}%` }}
                 />
               </div>
-              <p className="text-[11px] theme-text-faint">
+              <p className="text-xs theme-text-muted mb-2">
                 {formatBytes(quota.usedBytes)} of {formatBytes(quota.quotaBytes)} used
               </p>
+              <button
+                onClick={() => setCurrentView("analytics")}
+                className="text-xs font-semibold text-[#0b57d0] dark:text-[#a8c7fa] hover:underline cursor-pointer"
+              >
+                Storage details
+              </button>
             </div>
           )}
         </aside>
 
-        {/* Right Content */}
-        <main className="flex-1 flex flex-col overflow-y-auto theme-bg-app p-6 transition-colors">
+        {/* Right Content Sheet Canvas */}
+        <div className="flex-1 p-2 sm:p-4 pr-3 sm:pr-5 pb-3 sm:pb-5 flex flex-col overflow-hidden">
+          <main className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#1e1f20] rounded-2xl border border-[#e0e2ec]/70 dark:border-[#3c4043] p-5 shadow-xs transition-colors">
           {/* Notifications */}
           {errorAlert && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center justify-between">
@@ -1050,54 +1084,64 @@ export function App() {
           )}
 
           {/* Top Toolbar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             {/* Breadcrumb Path */}
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              {currentView === "drive" &&
-                breadcrumbs().map((crumb, idx) => (
-                  <React.Fragment key={crumb.path}>
-                    {idx > 0 && <ChevronRight className="w-4 h-4 theme-text-faint" />}
-                    <button
-                      onClick={() => navigateToFolder(crumb.path)}
-                      className={`hover:text-[var(--app-primary-light)] transition-colors ${
-                        idx === breadcrumbs().length - 1 ? "theme-text-main font-semibold" : "theme-text-muted"
-                      }`}
-                    >
-                      {crumb.name}
-                    </button>
-                  </React.Fragment>
-                ))}
+            <div className="flex items-center gap-2 text-base font-medium">
+              {currentView === "drive" && (
+                currentPath === "/" ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xl font-normal theme-text-main font-sans">My Drive</span>
+                    <ChevronDown className="w-4 h-4 theme-text-muted" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    {breadcrumbs().map((crumb, idx) => (
+                      <React.Fragment key={crumb.path}>
+                        {idx > 0 && <ChevronRight className="w-4 h-4 theme-text-faint" />}
+                        <button
+                          onClick={() => navigateToFolder(crumb.path)}
+                          className={`hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] transition-colors ${
+                            idx === breadcrumbs().length - 1 ? "theme-text-main font-semibold text-base" : "theme-text-muted"
+                          }`}
+                        >
+                          {crumb.name}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )
+              )}
 
-              {currentView === "recent" && <span className="theme-text-main font-semibold">Recent Files</span>}
-              {currentView === "starred" && <span className="theme-text-main font-semibold">Starred Favorites</span>}
-              {currentView === "shared_with_me" && <span className="theme-text-main font-semibold">Files Shared with Me</span>}
-              {currentView === "shares" && <span className="theme-text-main font-semibold">Active Public Share Links</span>}
-              {currentView === "analytics" && <span className="theme-text-main font-semibold">Storage Analytics & Breakdown</span>}
-              {currentView === "activity" && <span className="theme-text-main font-semibold">Audit Activity Trail</span>}
-              {currentView === "trash" && <span className="theme-text-main font-semibold">Recycle Bin</span>}
+              {currentView === "recent" && <span className="text-xl font-normal theme-text-main font-sans">Recent</span>}
+              {currentView === "starred" && <span className="text-xl font-normal theme-text-main font-sans">Starred</span>}
+              {currentView === "shared_with_me" && <span className="text-xl font-normal theme-text-main font-sans">Shared with me</span>}
+              {currentView === "shares" && <span className="text-xl font-normal theme-text-main font-sans">Public links</span>}
+              {currentView === "analytics" && <span className="text-xl font-normal theme-text-main font-sans">Storage</span>}
+              {currentView === "activity" && <span className="text-xl font-normal theme-text-main font-sans">Activity</span>}
+              {currentView === "trash" && <span className="text-xl font-normal theme-text-main font-sans">Trash</span>}
             </div>
 
             {/* Actions Bar & Batch Operations */}
             <div className="flex items-center gap-2">
               {/* Batch Actions Bar (when items are selected) */}
               {selectedIds.size > 0 && (
-                <div className="flex items-center gap-1.5 theme-pill-active px-3 py-1.5 rounded-xl shadow-md">
-                  <span className="text-xs font-semibold mr-1">{selectedIds.size} selected</span>
+                <div className="flex items-center gap-1.5 bg-[#c2e7ff] text-[#001d35] dark:bg-[#004a77] dark:text-[#c2e7ff] px-3.5 py-1.5 rounded-full shadow-sm text-xs font-semibold">
+                  <span className="mr-1">{selectedIds.size} selected</span>
                   <button
                     onClick={handleBatchDownloadZip}
-                    className="p-1 rounded hover:bg-[var(--app-primary-soft)]"
+                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
                     title="Download Selected as ZIP"
                   >
                     <FolderDown className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleBatchTrash}
-                    className="p-1 rounded hover:bg-red-500/20 text-red-300"
+                    className="p-1 rounded-full hover:bg-red-500/20 text-red-600 dark:text-red-300"
                     title="Move Selected to Trash"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setSelectedIds(new Set())} className="p-1 rounded hover:bg-[var(--app-primary-soft)]">
+                  <button onClick={() => setSelectedIds(new Set())} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1105,20 +1149,20 @@ export function App() {
 
               {/* Sort Selector */}
               {["drive", "recent", "starred"].includes(currentView) && (
-                <div className="flex items-center gap-1 theme-bg-surface border theme-border rounded-lg px-2 py-1 text-xs theme-text-muted">
-                  <ArrowUpDown className="w-3.5 h-3.5 theme-text-faint" />
+                <div className="flex items-center gap-1 bg-[#f0f4f9] dark:bg-[#282a2c] border border-[#e0e2ec] dark:border-[#3c4043] rounded-full px-3 py-1.5 text-xs theme-text-sub">
+                  <ArrowUpDown className="w-3.5 h-3.5 theme-text-muted" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-transparent theme-text-sub focus:outline-none"
+                    className="bg-transparent theme-text-sub focus:outline-none cursor-pointer text-xs"
                   >
-                    <option value="date" className="theme-bg-surface">Last Modified</option>
-                    <option value="name" className="theme-bg-surface">Name</option>
-                    <option value="size" className="theme-bg-surface">Size</option>
+                    <option value="date" className="bg-white dark:bg-[#1e1f20]">Last Modified</option>
+                    <option value="name" className="bg-white dark:bg-[#1e1f20]">Name</option>
+                    <option value="size" className="bg-white dark:bg-[#1e1f20]">Size</option>
                   </select>
                   <button
                     onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                    className="ml-1 text-xs font-bold text-[var(--app-primary-light)]"
+                    className="ml-1 text-xs font-bold text-[#0b57d0] dark:text-[#a8c7fa] hover:opacity-80"
                   >
                     {sortOrder === "asc" ? "↑" : "↓"}
                   </button>
@@ -1128,24 +1172,26 @@ export function App() {
               {currentView === "trash" && items.length > 0 && (
                 <button
                   onClick={handleEmptyTrash}
-                  className="py-1.5 px-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold rounded-lg border border-red-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-1.5 px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Empty Trash</span>
+                  <span>Empty trash</span>
                 </button>
               )}
 
               {/* View Toggle */}
-              <div className="flex theme-bg-surface border theme-border rounded-lg p-0.5">
+              <div className="flex bg-[#f0f4f9] dark:bg-[#282a2c] border border-[#e0e2ec] dark:border-[#3c4043] rounded-full p-0.5">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "theme-bg-subtle theme-text-main font-semibold shadow-xs" : "theme-text-muted"}`}
+                  title="Grid view"
+                  className={`p-1.5 rounded-full transition-colors ${viewMode === "grid" ? "bg-white dark:bg-[#1e1f20] text-[#0b57d0] dark:text-[#a8c7fa] shadow-xs" : "theme-text-muted hover:theme-text-main"}`}
                 >
                   <Grid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "theme-bg-subtle theme-text-main font-semibold shadow-xs" : "theme-text-muted"}`}
+                  title="List view"
+                  className={`p-1.5 rounded-full transition-colors ${viewMode === "list" ? "bg-white dark:bg-[#1e1f20] text-[#0b57d0] dark:text-[#a8c7fa] shadow-xs" : "theme-text-muted hover:theme-text-main"}`}
                 >
                   <ListIcon className="w-4 h-4" />
                 </button>
@@ -1155,49 +1201,44 @@ export function App() {
 
           {/* Filter Pills */}
           {["drive", "starred", "recent"].includes(currentView) && (
-            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
               {(["all", "document", "image", "audio", "video", "archive", "code"] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-all ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-medium capitalize transition-all border ${
                     selectedFilter === filter
-                      ? "theme-btn-primary font-semibold shadow-sm"
-                      : "theme-bg-surface theme-text-muted border theme-border hover:theme-text-main theme-bg-hover"
+                      ? "bg-[#c2e7ff] text-[#001d35] border-[#0b57d0]/40 font-semibold dark:bg-[#004a77] dark:text-[#c2e7ff]"
+                      : "bg-white dark:bg-[#1e1f20] theme-text-sub border-[#e0e2ec] dark:border-[#3c4043] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2c]"
                   }`}
                 >
-                  {filter}
+                  {filter === "all" ? "Type" : filter}
                 </button>
               ))}
             </div>
           )}
 
-          {/* VIEW: Storage Analytics & Breakdown */}
+          {/* VIEW: Storage Breakdown */}
           {currentView === "analytics" && breakdown && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="theme-bg-surface border theme-border rounded-2xl p-6 shadow-sm">
-                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Total Storage Quota</p>
+                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Total storage</p>
                   <p className="text-2xl font-bold theme-text-main">{formatBytes(breakdown.totalQuotaBytes)}</p>
-                  <p className="text-xs theme-text-faint mt-2">Allocated personal drive space</p>
                 </div>
                 <div className="theme-bg-surface border theme-border rounded-2xl p-6 shadow-sm">
-                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Used Storage</p>
+                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Used storage</p>
                   <p className="text-2xl font-bold text-[var(--app-primary-light)]">{formatBytes(breakdown.totalUsedBytes)}</p>
-                  <p className="text-xs theme-text-faint mt-2">
-                    {((breakdown.totalUsedBytes / breakdown.totalQuotaBytes) * 100).toFixed(1)}% of quota
-                  </p>
                 </div>
                 <div className="theme-bg-surface border theme-border rounded-2xl p-6 shadow-sm">
-                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Recycle Bin</p>
+                  <p className="text-xs uppercase theme-text-muted font-semibold mb-1">Trash</p>
                   <p className="text-2xl font-bold text-red-400">{formatBytes(breakdown.trashBytes)}</p>
-                  <p className="text-xs theme-text-faint mt-2">Space recoverable via empty trash</p>
                 </div>
               </div>
 
               {/* Category Breakdown Bars */}
               <div className="theme-bg-surface border theme-border rounded-2xl p-6 shadow-sm">
-                <h3 className="text-base font-bold theme-text-main mb-4">Storage Breakdown by Category</h3>
+                <h3 className="text-base font-bold theme-text-main mb-4">Storage details</h3>
                 <div className="space-y-4">
                   {[
                     { label: "Documents", size: breakdown.documentsBytes, color: "bg-blue-500" },
@@ -1272,7 +1313,7 @@ export function App() {
                   {sharedWithMe.length === 0 && (
                     <tr>
                       <td colSpan={5} className="py-8 text-center theme-text-muted text-sm">
-                        No files have been shared with you by other users yet.
+                        No shared files
                       </td>
                     </tr>
                   )}
@@ -1332,7 +1373,7 @@ export function App() {
                   {shares.length === 0 && (
                     <tr>
                       <td colSpan={5} className="py-8 text-center theme-text-muted text-sm">
-                        No active share links.
+                        No shared links
                       </td>
                     </tr>
                   )}
@@ -1362,6 +1403,13 @@ export function App() {
                       <td className="py-3 px-4 theme-text-faint text-xs">{new Date(act.timestamp).toLocaleString()}</td>
                     </tr>
                   ))}
+                  {activities.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center theme-text-muted text-sm">
+                        No activity
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1379,236 +1427,344 @@ export function App() {
                   <div className="w-16 h-16 rounded-2xl theme-bg-surface border theme-border flex items-center justify-center mb-3">
                     <Cloud className="w-8 h-8 theme-text-muted" />
                   </div>
-                  <h3 className="text-base font-semibold theme-text-sub">No files found</h3>
-                  <p className="text-xs theme-text-muted mt-1 max-w-sm">
-                    {currentView === "trash"
-                      ? "Your Recycle Bin is empty."
-                      : "Drag & drop files here or click + New to add files."}
-                  </p>
+                  <h3 className="text-base font-medium theme-text-muted">
+                    {currentView === "trash" ? "Trash is empty" : "No files"}
+                  </h3>
                 </div>
               ) : viewMode === "grid" ? (
                 /* Grid View */
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`group theme-bg-surface hover:theme-bg-hover border ${
-                        selectedIds.has(item.id) ? "border-[var(--app-primary)] bg-[var(--app-primary-soft)]" : "theme-border hover:border-[var(--app-border-focus)]"
-                      } rounded-2xl p-4 transition-all flex flex-col justify-between relative cursor-pointer shadow-sm`}
-                      onClick={() => handleItemPreviewOrOpen(item)}
-                    >
-                      {/* Select Checkbox (top-left) */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSelectItem(item.id);
-                        }}
-                        className={`absolute top-3 left-3 p-1 rounded-lg transition-opacity ${
-                          selectedIds.has(item.id) ? "opacity-100 text-[var(--app-primary-light)]" : "opacity-0 group-hover:opacity-100 theme-text-muted hover:theme-text-main"
-                        }`}
-                      >
-                        {selectedIds.has(item.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                      </button>
-
-                      {/* Header of Card */}
-                      <div className="flex items-center justify-between mb-3 pl-6">
-                        <div className="p-2 rounded-xl theme-bg-input border theme-border-subtle">
-                          {getFileIcon(item)}
-                        </div>
-
-                        {/* Card Hover Action Menu */}
-                        <div
-                          className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {currentView !== "trash" ? (
-                            <>
-                              <button
-                                onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
-                                className={`p-1.5 rounded-lg theme-bg-hover ${
-                                  item.starred ? "text-amber-400" : "theme-text-muted"
-                                }`}
-                              >
-                                <Star className="w-3.5 h-3.5 fill-current" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShareItemTarget(item);
-                                  setGeneratedShare(null);
-                                }}
-                                className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
-                                title="Share"
-                              >
-                                <Share2 className="w-3.5 h-3.5" />
-                              </button>
-                              {!item.directory && (
-                                <button
-                                  onClick={() => handleOpenVersions(item)}
-                                  className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
-                                  title="Version History"
-                                >
-                                  <History className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              {item.directory && (
-                                <button
-                                  onClick={() => setColorPickerTarget(item)}
-                                  className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
-                                  title="Folder Color"
-                                >
-                                  <Palette className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setRenameItemTarget(item);
-                                  setRenameValue(item.name);
-                                }}
-                                className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
-                                title="Rename"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  moveItemToTrash(item.id).then(() => {
-                                    notifySuccess(`Moved "${item.name}" to Trash`);
-                                    loadCurrentViewData();
-                                    loadQuota();
-                                  });
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-red-500/20 theme-text-muted hover:text-red-400"
-                                title="Trash"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                restoreItemFromTrash(item.id).then(() => {
-                                  notifySuccess(`Restored "${item.name}"`);
-                                  loadCurrentViewData();
-                                  loadQuota();
-                                });
-                              }}
-                              className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-emerald-400"
-                              title="Restore"
+                <div className="space-y-6">
+                  {/* Folders Section */}
+                  {filteredItems.filter((i) => i.directory).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium theme-text-sub mb-3">Folders</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {filteredItems
+                          .filter((i) => i.directory)
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              className={`group bg-[#f0f4f9] hover:bg-[#e1e9f5] dark:bg-[#282a2c] dark:hover:bg-[#333537] rounded-xl px-3.5 py-3 flex items-center justify-between border ${
+                                selectedIds.has(item.id)
+                                  ? "border-[#0b57d0] dark:border-[#a8c7fa] bg-[#c2e7ff]/30"
+                                  : "border-transparent hover:border-[#c2e7ff]/70"
+                              } transition-all cursor-pointer shadow-xs`}
+                              onClick={() => handleItemPreviewOrOpen(item)}
                             >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                              <div className="flex items-center gap-3 min-w-0 pr-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSelectItem(item.id);
+                                  }}
+                                  className={`p-0.5 rounded transition-opacity ${
+                                    selectedIds.has(item.id)
+                                      ? "opacity-100 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                      : "opacity-0 group-hover:opacity-100 theme-text-muted"
+                                  }`}
+                                >
+                                  {selectedIds.has(item.id) ? (
+                                    <CheckSquare className="w-4 h-4" />
+                                  ) : (
+                                    <Square className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <div className="shrink-0">{getFileIcon(item)}</div>
+                                <span className="text-sm font-medium theme-text-main truncate" title={item.name}>
+                                  {item.name}
+                                </span>
+                              </div>
 
-                      {/* Info */}
-                      <div>
-                        <p className="text-sm font-semibold theme-text-main truncate" title={item.name}>
-                          {item.name}
-                        </p>
-                        <div className="flex justify-between items-center text-xs theme-text-muted mt-1">
-                          <span>
-                            {item.directory
-                              ? "Folder"
-                              : `${formatBytes(item.size)} • v${item.versionCount || 1}`}
-                          </span>
-                          <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
-                        </div>
+                              {/* Hover Action Menu */}
+                              <div
+                                className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {currentView !== "trash" ? (
+                                  <>
+                                    <button
+                                      onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
+                                      className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 ${
+                                        item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
+                                      }`}
+                                      title="Star"
+                                    >
+                                      <Star className="w-3.5 h-3.5 fill-current" />
+                                    </button>
+                                    <button
+                                      onClick={() => setColorPickerTarget(item)}
+                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                      title="Folder Color"
+                                    >
+                                      <Palette className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setRenameItemTarget(item);
+                                        setRenameValue(item.name);
+                                      }}
+                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                      title="Rename"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <a
+                                      href={getFolderZipDownloadUrl(item.id)}
+                                      download
+                                      className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                      title="Download ZIP"
+                                    >
+                                      <FolderDown className="w-3.5 h-3.5" />
+                                    </a>
+                                    <button
+                                      onClick={() => {
+                                        moveItemToTrash(item.id).then(() => {
+                                          notifySuccess(`Moved "${item.name}" to Trash`);
+                                          loadCurrentViewData();
+                                          loadQuota();
+                                        });
+                                      }}
+                                      className="p-1 rounded-lg hover:bg-red-500/15 theme-text-muted hover:text-red-500"
+                                      title="Move to Trash"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      restoreItemFromTrash(item.id).then(() => {
+                                        notifySuccess(`Restored "${item.name}"`);
+                                        loadCurrentViewData();
+                                        loadQuota();
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
+                                    title="Restore"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                       </div>
-
-                      {/* Download Link */}
-                      {currentView !== "trash" && (
-                        <div
-                          className="mt-3 pt-3 border-t theme-border-subtle flex justify-between items-center"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => {
-                              setMoveItemTarget(item);
-                              setMoveTargetPath(item.path);
-                            }}
-                            className="text-xs theme-text-muted hover:theme-text-main"
-                          >
-                            Move
-                          </button>
-                          <a
-                            href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
-                            download
-                            className="text-xs text-[var(--app-primary-light)] hover:opacity-80 flex items-center gap-1 font-medium"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{item.directory ? "ZIP" : "Download"}</span>
-                          </a>
-                        </div>
-                      )}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Files Section */}
+                  {filteredItems.filter((i) => !i.directory).length > 0 && (
+                    <div>
+                      {filteredItems.filter((i) => i.directory).length > 0 && (
+                        <h3 className="text-sm font-medium theme-text-sub mb-3">Files</h3>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {filteredItems
+                          .filter((i) => !i.directory)
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              className={`group bg-[#f0f4f9]/70 dark:bg-[#282a2c]/70 hover:bg-[#e9eef6] dark:hover:bg-[#333537] border ${
+                                selectedIds.has(item.id)
+                                  ? "border-[#0b57d0] dark:border-[#a8c7fa] bg-[#c2e7ff]/25"
+                                  : "border-[#e0e2ec] dark:border-[#3c4043] hover:border-[#c2e7ff]"
+                              } rounded-2xl overflow-hidden transition-all flex flex-col justify-between relative cursor-pointer shadow-xs hover:shadow-md`}
+                              onClick={() => handleItemPreviewOrOpen(item)}
+                            >
+                              {/* Top Preview/Icon Area */}
+                              <div className="h-32 bg-white/70 dark:bg-black/20 flex items-center justify-center relative p-4 border-b border-[#e0e2ec]/60 dark:border-[#3c4043]/60">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSelectItem(item.id);
+                                  }}
+                                  className={`absolute top-2.5 left-2.5 p-1 rounded-md transition-opacity ${
+                                    selectedIds.has(item.id)
+                                      ? "opacity-100 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                      : "opacity-0 group-hover:opacity-100 theme-text-muted hover:theme-text-main"
+                                  }`}
+                                >
+                                  {selectedIds.has(item.id) ? (
+                                    <CheckSquare className="w-4 h-4" />
+                                  ) : (
+                                    <Square className="w-4 h-4" />
+                                  )}
+                                </button>
+
+                                <div className="scale-125 transform transition-transform group-hover:scale-135">
+                                  {getFileIcon(item)}
+                                </div>
+
+                                {item.starred && (
+                                  <Star className="w-4 h-4 text-amber-500 fill-current absolute top-2.5 right-2.5" />
+                                )}
+                              </div>
+
+                              {/* Bottom Details Footer */}
+                              <div className="p-3.5 flex flex-col justify-between flex-1">
+                                <div className="flex items-start justify-between gap-1 mb-1">
+                                  <span className="text-xs font-semibold theme-text-main truncate" title={item.name}>
+                                    {item.name}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] theme-text-muted mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40">
+                                  <span>{formatBytes(item.size)}</span>
+                                  <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
+                                </div>
+
+                                {/* Action Row on Hover */}
+                                <div
+                                  className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {currentView !== "trash" ? (
+                                    <>
+                                      <button
+                                        onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
+                                        className={`p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 ${
+                                          item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
+                                        }`}
+                                        title="Star"
+                                      >
+                                        <Star className="w-3.5 h-3.5 fill-current" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setShareItemTarget(item);
+                                          setGeneratedShare(null);
+                                        }}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="Share"
+                                      >
+                                        <Share2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenVersions(item)}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="Version History"
+                                      >
+                                        <History className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setRenameItemTarget(item);
+                                          setRenameValue(item.name);
+                                        }}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="Rename"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <a
+                                        href={getFileDownloadUrl(item.id)}
+                                        download
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
+                                        title="Download"
+                                      >
+                                        <Download className="w-3.5 h-3.5" />
+                                      </a>
+                                      <button
+                                        onClick={() => {
+                                          moveItemToTrash(item.id).then(() => {
+                                            notifySuccess(`Moved "${item.name}" to Trash`);
+                                            loadCurrentViewData();
+                                            loadQuota();
+                                          });
+                                        }}
+                                        className="p-1 rounded hover:bg-red-500/15 theme-text-muted hover:text-red-500"
+                                        title="Move to Trash"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        restoreItemFromTrash(item.id).then(() => {
+                                          notifySuccess(`Restored "${item.name}"`);
+                                          loadCurrentViewData();
+                                          loadQuota();
+                                        });
+                                      }}
+                                      className="p-1 rounded hover:bg-emerald-500/15 text-emerald-500"
+                                      title="Restore"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* List View */
-                <div className="theme-bg-surface border theme-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1e1f20] border border-[#e0e2ec] dark:border-[#3c4043] rounded-2xl overflow-hidden shadow-xs">
                   <table className="w-full text-left text-sm">
-                    <thead className="theme-bg-subtle border-b theme-border text-xs uppercase theme-text-muted font-semibold">
+                    <thead className="bg-[#f0f4f9] dark:bg-[#282a2c] border-b border-[#e0e2ec] dark:border-[#3c4043] text-xs font-semibold theme-text-sub">
                       <tr>
                         <th className="py-3 px-4 w-10">
                           <button onClick={handleSelectAll}>
                             {selectedIds.size > 0 && selectedIds.size === filteredItems.length ? (
-                              <CheckSquare className="w-4 h-4 text-[var(--app-primary-light)]" />
+                              <CheckSquare className="w-4 h-4 text-[#0b57d0] dark:text-[#a8c7fa]" />
                             ) : (
                               <Square className="w-4 h-4 theme-text-muted" />
                             )}
                           </button>
                         </th>
                         <th className="py-3 px-4">Name</th>
-                        <th className="py-3 px-4">Type</th>
-                        <th className="py-3 px-4">Size</th>
-                        <th className="py-3 px-4">Version</th>
-                        <th className="py-3 px-4">Last Modified</th>
+                        <th className="py-3 px-4">Owner</th>
+                        <th className="py-3 px-4">Last modified</th>
+                        <th className="py-3 px-4">File size</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y theme-border-subtle">
+                    <tbody className="divide-y divide-[#e0e2ec]/60 dark:divide-[#3c4043]/60">
                       {filteredItems.map((item) => (
                         <tr
                           key={item.id}
-                          className={`hover:theme-bg-hover transition-colors cursor-pointer ${
-                            selectedIds.has(item.id) ? "bg-[var(--app-primary-soft)]" : ""
+                          className={`hover:bg-[#f0f4f9] dark:hover:bg-[#282a2c] transition-colors cursor-pointer ${
+                            selectedIds.has(item.id) ? "bg-[#c2e7ff]/30 dark:bg-[#004a77]/30" : ""
                           }`}
                           onClick={() => handleItemPreviewOrOpen(item)}
                         >
                           <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => toggleSelectItem(item.id)}>
                               {selectedIds.has(item.id) ? (
-                                <CheckSquare className="w-4 h-4 text-[var(--app-primary-light)]" />
+                                <CheckSquare className="w-4 h-4 text-[#0b57d0] dark:text-[#a8c7fa]" />
                               ) : (
                                 <Square className="w-4 h-4 theme-text-muted" />
                               )}
                             </button>
                           </td>
-                          <td className="py-3 px-4 flex items-center gap-3 font-semibold theme-text-main">
+                          <td className="py-3 px-4 flex items-center gap-3 font-medium theme-text-main">
                             {getFileIcon(item)}
                             <span className="truncate max-w-xs">{item.name}</span>
+                            {item.starred && (
+                              <Star className="w-3.5 h-3.5 text-amber-500 fill-current shrink-0" />
+                            )}
                           </td>
                           <td className="py-3 px-4 theme-text-muted text-xs">
-                            {item.directory ? "Folder" : item.extension.toUpperCase() || "File"}
-                          </td>
-                          <td className="py-3 px-4 theme-text-muted text-xs">
-                            {item.directory ? "—" : formatBytes(item.size)}
-                          </td>
-                          <td className="py-3 px-4 text-xs font-mono theme-text-sub">
-                            {item.directory ? "—" : `v${item.versionCount || 1}`}
+                            me
                           </td>
                           <td className="py-3 px-4 theme-text-muted text-xs">
                             {new Date(item.updatedAt).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-3 px-4 theme-text-muted text-xs">
+                            {item.directory ? "—" : formatBytes(item.size)}
+                          </td>
+                          <td className="py-3 px-4 text-right space-x-1.5" onClick={(e) => e.stopPropagation()}>
                             {currentView !== "trash" ? (
                               <>
                                 <button
                                   onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
-                                  className={`p-1.5 rounded-lg theme-bg-hover ${
-                                    item.starred ? "text-amber-400" : "theme-text-muted"
+                                  className={`p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 ${
+                                    item.starred ? "text-amber-500" : "theme-text-muted hover:theme-text-main"
                                   }`}
+                                  title="Star"
                                 >
                                   <Star className="w-4 h-4 fill-current" />
                                 </button>
@@ -1617,7 +1773,7 @@ export function App() {
                                     setShareItemTarget(item);
                                     setGeneratedShare(null);
                                   }}
-                                  className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
+                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
                                   title="Share"
                                 >
                                   <Share2 className="w-4 h-4" />
@@ -1625,7 +1781,7 @@ export function App() {
                                 <a
                                   href={item.directory ? getFolderZipDownloadUrl(item.id) : getFileDownloadUrl(item.id)}
                                   download
-                                  className="p-1.5 rounded-lg theme-bg-hover text-[var(--app-primary-light)] inline-block"
+                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] inline-block"
                                   title="Download"
                                 >
                                   <Download className="w-4 h-4" />
@@ -1635,7 +1791,7 @@ export function App() {
                                     setRenameItemTarget(item);
                                     setRenameValue(item.name);
                                   }}
-                                  className="p-1.5 rounded-lg theme-bg-hover theme-text-muted hover:theme-text-main"
+                                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 theme-text-muted hover:theme-text-main"
                                   title="Rename"
                                 >
                                   <Edit3 className="w-4 h-4" />
@@ -1648,7 +1804,7 @@ export function App() {
                                       loadQuota();
                                     });
                                   }}
-                                  className="p-1.5 rounded-lg hover:bg-red-500/20 theme-text-muted hover:text-red-400"
+                                  className="p-1.5 rounded-lg hover:bg-red-500/15 theme-text-muted hover:text-red-500"
                                   title="Trash"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1663,7 +1819,8 @@ export function App() {
                                     loadQuota();
                                   });
                                 }}
-                                className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-emerald-400"
+                                className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
+                                title="Restore"
                               >
                                 <RotateCcw className="w-4 h-4" />
                               </button>
@@ -1678,6 +1835,7 @@ export function App() {
             </>
           )}
         </main>
+        </div>
       </div>
 
       {/* MODAL: New Folder */}
@@ -1718,13 +1876,13 @@ export function App() {
       {newDocOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="theme-bg-surface border theme-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-lg font-bold theme-text-main mb-4">Create Document</h3>
+            <h3 className="text-lg font-bold theme-text-main mb-4">New document</h3>
             <form onSubmit={handleCreateDoc}>
               <div className="space-y-3 mb-4">
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Document name (e.g. Notes)"
+                  placeholder="Document name"
                   value={newDocName}
                   onChange={(e) => setNewDocName(e.target.value)}
                   className="w-full theme-bg-input border theme-border rounded-xl px-4 py-2.5 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)]"
@@ -1753,7 +1911,7 @@ export function App() {
                   type="submit"
                   className="px-4 py-2 theme-btn-primary text-xs font-semibold rounded-xl cursor-pointer"
                 >
-                  Create & Edit
+                  Create
                 </button>
               </div>
             </form>
@@ -1798,13 +1956,12 @@ export function App() {
       {moveItemTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="theme-bg-surface border theme-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-lg font-bold theme-text-main mb-2">Move "{moveItemTarget.name}"</h3>
-            <p className="text-xs theme-text-muted mb-4">Enter target destination path in your drive:</p>
+            <h3 className="text-lg font-bold theme-text-main mb-4">Move "{moveItemTarget.name}"</h3>
             <form onSubmit={handleMove}>
               <input
                 type="text"
                 autoFocus
-                placeholder="/ or /FolderName"
+                placeholder="Destination path"
                 value={moveTargetPath}
                 onChange={(e) => setMoveTargetPath(e.target.value)}
                 className="w-full theme-bg-input border theme-border rounded-xl px-4 py-2.5 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)] mb-4"
@@ -1899,7 +2056,7 @@ export function App() {
                 </div>
               ))}
               {versionsList.length === 0 && (
-                <p className="text-xs theme-text-muted text-center py-4">No previous revisions recorded yet.</p>
+                <p className="text-xs theme-text-muted text-center py-4">No previous versions</p>
               )}
             </div>
           </div>
@@ -1942,9 +2099,6 @@ export function App() {
             {shareTab === "public" ? (
               !generatedShare ? (
                 <div className="space-y-4">
-                  <p className="text-xs theme-text-muted">
-                    Create an anonymous download link. Anyone with this link can access the file.
-                  </p>
                   <div>
                     <label className="block text-xs font-semibold theme-text-muted mb-1.5">Expiration</label>
                     <select
@@ -1968,7 +2122,7 @@ export function App() {
               ) : (
                 <div className="space-y-4">
                   <div className="p-3 theme-bg-input border theme-border rounded-xl">
-                    <p className="text-xs theme-text-muted mb-1">Public Shareable URL</p>
+                    <p className="text-xs theme-text-muted mb-1">Link</p>
                     <p className="text-sm font-mono text-[var(--app-primary-light)] truncate">
                       {window.location.origin}/?share={generatedShare.token}
                     </p>
@@ -1982,22 +2136,19 @@ export function App() {
                     className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md"
                   >
                     <Copy className="w-4 h-4" />
-                    <span>Copy Link to Clipboard</span>
+                    <span>Copy link</span>
                   </button>
                 </div>
               )
             ) : (
               /* User-to-User Share Form */
               <form onSubmit={handleShareWithUser} className="space-y-4">
-                <p className="text-xs theme-text-muted">
-                  Share directly with another registered account. It will appear in their "Shared with Me" tab.
-                </p>
                 <div>
-                  <label className="block text-xs font-semibold theme-text-muted mb-1.5">Recipient Username</label>
+                  <label className="block text-xs font-semibold theme-text-muted mb-1.5">Recipient</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. student"
+                    placeholder="Username"
                     value={shareTargetUsername}
                     onChange={(e) => setShareTargetUsername(e.target.value)}
                     className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
@@ -2018,7 +2169,7 @@ export function App() {
                   type="submit"
                   className="w-full py-2.5 theme-btn-primary text-sm font-semibold rounded-xl cursor-pointer shadow-md"
                 >
-                  Share with User
+                  Share
                 </button>
               </form>
             )}

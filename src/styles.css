@@ -9,6 +9,92 @@
 
 /* Color Theme Tokens */
 :root,
+:root[data-theme="gdrive-light"] {
+  color-scheme: light;
+  font-family: "Google Sans", Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --app-bg: #f8fafd;
+  --app-header-bg: #f8fafd;
+  --app-sidebar-bg: #f8fafd;
+  --app-surface: #ffffff;
+  --app-surface-subtle: #f0f4f9;
+  --app-surface-hover: #e9eef6;
+  --app-input-bg: #edf2fc;
+  --app-border: #e0e2ec;
+  --app-border-subtle: rgba(116, 119, 117, 0.2);
+  --app-border-focus: #0b57d0;
+  --app-text-main: #1f1f1f;
+  --app-text-sub: #444746;
+  --app-text-muted: #747775;
+  --app-text-faint: #9ea1a0;
+  --app-primary: #0b57d0;
+  --app-primary-hover: #0842a0;
+  --app-primary-light: #0b57d0;
+  --app-primary-glow: rgba(11, 87, 208, 0.25);
+  --app-primary-soft: #c2e7ff;
+  --app-primary-border: #7fcfff;
+  --app-gradient-from: #0b57d0;
+  --app-gradient-to: #1a73e8;
+  --app-pill-active-bg: #c2e7ff;
+  --app-pill-active-text: #001d35;
+  --app-glow-1: rgba(66, 133, 244, 0.12);
+  --app-glow-2: rgba(52, 168, 83, 0.10);
+
+  --bg: #f8fafd;
+  --bg-2: #ffffff;
+  --card: #ffffff;
+  --ink: #1f1f1f;
+  --muted: #747775;
+  --accent: #0b57d0;
+  --accent-2: #1a73e8;
+  --accent-soft: rgba(11, 87, 208, 0.1);
+  --accent-2-soft: rgba(26, 115, 232, 0.1);
+  --shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  --radius: 16px;
+}
+
+:root[data-theme="gdrive-dark"] {
+  color-scheme: dark;
+  font-family: "Google Sans", Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --app-bg: #131314;
+  --app-header-bg: #131314;
+  --app-sidebar-bg: #131314;
+  --app-surface: #1e1f20;
+  --app-surface-subtle: #282a2c;
+  --app-surface-hover: #333537;
+  --app-input-bg: #282a2c;
+  --app-border: #3c4043;
+  --app-border-subtle: rgba(255, 255, 255, 0.12);
+  --app-border-focus: #a8c7fa;
+  --app-text-main: #e3e3e3;
+  --app-text-sub: #c4c7c5;
+  --app-text-muted: #8e918f;
+  --app-text-faint: #5e6260;
+  --app-primary: #a8c7fa;
+  --app-primary-hover: #c2e7ff;
+  --app-primary-light: #a8c7fa;
+  --app-primary-glow: rgba(168, 199, 250, 0.25);
+  --app-primary-soft: #004a77;
+  --app-primary-border: #00639b;
+  --app-gradient-from: #a8c7fa;
+  --app-gradient-to: #7cacf8;
+  --app-pill-active-bg: #004a77;
+  --app-pill-active-text: #c2e7ff;
+  --app-glow-1: rgba(168, 199, 250, 0.08);
+  --app-glow-2: rgba(129, 201, 149, 0.08);
+
+  --bg: #131314;
+  --bg-2: #1e1f20;
+  --card: #1e1f20;
+  --ink: #e3e3e3;
+  --muted: #8e918f;
+  --accent: #a8c7fa;
+  --accent-2: #7cacf8;
+  --accent-soft: rgba(168, 199, 250, 0.15);
+  --accent-2-soft: rgba(124, 172, 248, 0.15);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --radius: 16px;
+}
+
 :root[data-theme="indigo"] {
   color-scheme: dark;
   font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
@@ -266,20 +352,43 @@
 .theme-text-primary { color: var(--app-primary-light) !important; }
 
 .theme-btn-primary {
-  background: linear-gradient(135deg, var(--app-gradient-from), var(--app-gradient-to)) !important;
+  background-color: var(--app-primary) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px var(--app-primary-glow) !important;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
   transition: all 0.2s ease !important;
 }
 .theme-btn-primary:hover {
-  opacity: 0.93 !important;
-  transform: translateY(-1px) !important;
+  background-color: var(--app-primary-hover) !important;
+  opacity: 0.95 !important;
+}
+:root[data-theme="gdrive-dark"] .theme-btn-primary {
+  color: #041e49 !important;
 }
 
 .theme-pill-active {
-  background-color: var(--app-primary-soft) !important;
-  color: var(--app-primary-light) !important;
+  background-color: var(--app-pill-active-bg, var(--app-primary-soft)) !important;
+  color: var(--app-pill-active-text, var(--app-primary-light)) !important;
   border: 1px solid var(--app-primary-border) !important;
+}
+
+/* Elevating + New Button */
+.gdrive-new-btn {
+  background-color: #ffffff;
+  color: #1f1f1f;
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  transition: all 0.2s ease;
+}
+.gdrive-new-btn:hover {
+  box-shadow: 0 2px 6px 0 rgba(60, 64, 67, 0.3), 0 6px 12px 4px rgba(60, 64, 67, 0.15);
+  background-color: #f8fafd;
+}
+:root[data-theme="gdrive-dark"] .gdrive-new-btn {
+  background-color: #37393b;
+  color: #e3e3e3;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="gdrive-dark"] .gdrive-new-btn:hover {
+  background-color: #434547;
 }
 
 * {
@@ -288,11 +397,8 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 15% 10%, var(--accent-2-soft), transparent 60%),
-    radial-gradient(900px 500px at 85% 0%, var(--accent-soft), transparent 70%),
-    linear-gradient(120deg, var(--bg), var(--bg-2));
-  color: var(--ink);
+  background-color: var(--app-bg);
+  color: var(--app-text-main);
   min-height: 100vh;
 }
 
@@ -839,7 +945,8 @@ h1 {
   align-content: end;
 }
 
-input {
+.legacy-input,
+.legacy-form input {
   border-radius: 999px;
   border: 1px solid rgba(28, 37, 43, 0.2);
   padding: 10px 14px;
@@ -848,7 +955,8 @@ input {
   background: #fff;
 }
 
-select {
+.legacy-select,
+.legacy-form select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -872,7 +980,7 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
-button,
+.legacy-btn,
 .ghost,
 .actions a {
   border-radius: 999px;
@@ -891,13 +999,13 @@ button,
   gap: 6px;
 }
 
-button:hover,
+.legacy-btn:hover,
 .actions a:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(224, 122, 95, 0.2);
 }
 
-button:disabled {
+.legacy-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;

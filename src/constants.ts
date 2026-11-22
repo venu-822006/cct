@@ -2,20 +2,40 @@ import type { DateFilter, Theme, ViewMode } from "./types";
 import { parseEnvBoolean } from "./utils/env";
 
 export const API_BASE = "/api";
-export const BRAND_EYEBROW = import.meta.env.VITE_BRAND_EYEBROW ?? "Personal Cloud";
+export const BRAND_EYEBROW = import.meta.env.VITE_BRAND_EYEBROW ?? "Cloud Workspace";
 export const BRAND_TITLE = import.meta.env.VITE_BRAND_TITLE ?? "Cloud Drive";
 export const BRAND_SUBTITLE =
-  import.meta.env.VITE_BRAND_SUBTITLE ?? "Secure Cloud Storage & File Management";
+  import.meta.env.VITE_BRAND_SUBTITLE ?? "";
 export const SHORTCUTS_ENABLED = parseEnvBoolean(import.meta.env.VITE_SHORTCUTS_ENABLED, false);
 
-export const DEFAULT_THEME: Theme = "indigo";
-export const THEMES: Theme[] = ["indigo", "emerald", "ocean", "sunset", "nordic"];
+export const DEFAULT_THEME: Theme = "gdrive-light";
+export const THEMES: Theme[] = [
+  "gdrive-light",
+  "gdrive-dark",
+  "indigo",
+  "emerald",
+  "ocean",
+  "sunset",
+  "nordic",
+];
 export const THEME_STORAGE_KEY = "clouddrive-theme";
 
 export const THEME_CONFIGS: Record<
-  "indigo" | "emerald" | "ocean" | "sunset" | "nordic",
+  "gdrive-light" | "gdrive-dark" | "indigo" | "emerald" | "ocean" | "sunset" | "nordic",
   { name: string; icon: string; dotClass: string; desc: string }
 > = {
+  "gdrive-light": {
+    name: "Drive Light",
+    icon: "📁",
+    dotClass: "bg-blue-600",
+    desc: "Clean Minimalist Light",
+  },
+  "gdrive-dark": {
+    name: "Drive Dark",
+    icon: "🌙",
+    dotClass: "bg-blue-400",
+    desc: "Clean Minimalist Dark",
+  },
   indigo: {
     name: "Deep Indigo",
     icon: "🌌",

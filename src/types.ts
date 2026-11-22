@@ -85,6 +85,8 @@ export type SortMode =
   | "type-asc"
   | "type-desc";
 export type Theme =
+  | "gdrive-light"
+  | "gdrive-dark"
   | "indigo"
   | "emerald"
   | "ocean"
