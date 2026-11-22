@@ -258,6 +258,13 @@
 - [x] Documented the critical distinction between Cloud Shell (a temporary, 20-minute timeout developer sandbox behind Google bot proxies) and Google Cloud Run (a production serverless container service with dedicated HTTPS endpoints, no Cloud Shell proxies, and no bot CAPTCHA blocks).
 - [x] Verified tests pass: `bun test` (9/9 pass) and `mvn test` (9/9 pass, BUILD SUCCESS).
 
+## 20. Google Cloud Project Audit & Cleanup Preparation
+- [x] Audited all 17 projects in user's Google Cloud account via Cloud Shell.
+- [x] Identified single active project with billing enabled: `turing-racer-8sjh2` (Project Number: 753613244796 | Billing: True).
+- [x] Cataloged 16 inactive, non-billing projects for deletion.
+- [x] Prepared safe automated batch deletion sequence and Cloud Run deployment command targeting `turing-racer-8sjh2`.
+
+
 
 
 
