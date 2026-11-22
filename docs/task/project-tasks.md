@@ -212,3 +212,12 @@
 - [x] Verified that in-app reCAPTCHA is completely removed from all source code and built bundles.
 - [x] Ran full test suite (`bun test` -> 9/9 pass, `mvn test` -> 8/8 pass, BUILD SUCCESS).
 
+## 16. Cloud Shell Upload "Failed to Fetch" Final Resolution
+- [x] Permitted `HttpMethod.OPTIONS` globally in `SecurityConfig.java` to prevent CORS preflight rejections by the Cloud Shell HTTPS reverse proxy.
+- [x] Bypassed `OPTIONS` requests in `JwtAuthenticationFilter.java` so preflights are never evaluated for missing JWT tokens.
+- [x] Hardened `springApi.ts` to ensure `FormData` uploads never have conflicting `Content-Type` headers.
+- [x] Strengthened `deploy-cloudshell.sh` port cleanup using both `fuser` and `lsof -ti:8080 | xargs kill -9` to guarantee port 8080 is freed before launching.
+- [x] Updated git file mode permissions (`chmod +x`) for `deploy-cloudshell.sh` and `backend/mvnw`.
+- [x] Verified full build and test suites: `bun test` 9/9 pass, `mvn test` 8/8 pass (BUILD SUCCESS).
+
+

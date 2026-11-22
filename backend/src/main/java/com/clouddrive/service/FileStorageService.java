@@ -37,7 +37,7 @@ public class FileStorageService {
     private final FileVersionRepository fileVersionRepository;
     private final ActivityService activityService;
 
-    @Value("${app.storage.base-dir}")
+    @Value("${app.storage.base-dir:./storage_root}")
     private String baseDir;
 
     @Value("${app.storage.default-quota-bytes:524288000}")

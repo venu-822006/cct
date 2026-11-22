@@ -66,6 +66,7 @@ echo ""
 echo "[5/5] Starting Cloud Drive on port 8080..."
 echo "  Checking and freeing port 8080..."
 fuser -k 8080/tcp 2>/dev/null || true
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 pkill -f personal-cloud-drive 2>/dev/null || true
 sleep 1
 

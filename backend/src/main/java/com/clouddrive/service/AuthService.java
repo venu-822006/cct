@@ -30,10 +30,10 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final ActivityService activityService;
 
-    @Value("${app.storage.base-dir}")
+    @Value("${app.storage.base-dir:./storage_root}")
     private String baseDir;
 
-    @Value("${app.storage.default-quota-bytes}")
+    @Value("${app.storage.default-quota-bytes:524288000}")
     private long defaultQuotaBytes;
 
     public AuthService(UserRepository userRepository,
