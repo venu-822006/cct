@@ -41,9 +41,24 @@ export async function request(endpoint: string, options: RequestInit = {}) {
 
 export async function requestJson<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await request(endpoint, options);
-  const data = await response.json();
+  const text = await response.text();
+  let data: any = null;
+
+  if (text && text.trim().length > 0) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  } else {
+    data = {};
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || data.message || `Request failed with status ${response.status}`);
+    const errorMsg =
+      (data && (data.error || data.message)) ||
+      `Request failed with status ${response.status}`;
+    throw new Error(errorMsg);
   }
   return data as T;
 }

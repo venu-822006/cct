@@ -167,3 +167,8 @@
   - `public/robots.txt` blocking GPTBot, ClaudeBot, CCBot, Google-Extended, PerplexityBot, and scrapers.
   - Interactive Human Verification math challenge CAPTCHA and hidden honeypot trap on AuthModal.
 - [x] Verified full build (`npm run build` -> 0 errors) and backend test suite (`mvn test` -> 8/8 passing).
+
+## 10. Fix Safe JSON Response Parsing
+- [x] Fixed `requestJson` in `springApi.ts` to read `response.text()` before parsing JSON.
+- [x] Eliminated `Failed to execute 'json' on 'Response': Unexpected end of JSON input` error by safely handling empty response bodies, HTTP 204 No Content, and non-JSON server error text.
+- [x] Verified with production build (`npm run build` -> 0 errors) and backend unit test suite (`mvn test` -> 8/8 passing).
