@@ -21,10 +21,12 @@ DEFAULT_SERVICE="cloud-drive"
 PROJECT_ID=""
 REGION="$DEFAULT_REGION"
 BUCKET_NAME=""
+CREATE_PROJECT=false
 
 # ── Parse Arguments ────────────────────────────────────────────────
 while [[ "$#" -gt 0 ]]; do
   case $1 in
+    --create-project) CREATE_PROJECT=true ;;
     --project) PROJECT_ID="$2"; shift ;;
     --region) REGION="$2"; shift ;;
     --bucket) BUCKET_NAME="$2"; shift ;;
@@ -32,6 +34,7 @@ while [[ "$#" -gt 0 ]]; do
       echo "Cloud Drive - Google Cloud Deployment Script"
       echo ""
       echo "Options:"
+      echo "  --create-project          Automatically create a fresh GCP project linked to your billing account"
       echo "  --project <PROJECT_ID>    Google Cloud Project ID (defaults to active gcloud project)"
       echo "  --region <REGION>         Google Cloud region (default: us-central1)"
       echo "  --bucket <BUCKET_NAME>    Optional GCS bucket name for persistent file storage"
@@ -49,6 +52,22 @@ echo "========================================================"
 echo ""
 
 # ── 1. Detect & Validate Project ID ─────────────────────────────────
+if [ "$CREATE_PROJECT" = true ]; then
+  echo "[1/6] Auto-creating a fresh Google Cloud Project..."
+  BILLING_ACCOUNT=$(gcloud billing accounts list --filter="open=true" --format="value(name)" 2>/dev/null | head -1)
+  if [ -z "$BILLING_ACCOUNT" ]; then
+    echo "Error: No open Google Cloud billing account found."
+    echo "Run: gcloud billing accounts list"
+    exit 1
+  fi
+  PROJECT_ID="clouddrive-$(date +%s)"
+  echo "  Creating project: $PROJECT_ID..."
+  gcloud projects create "$PROJECT_ID" --name="Personal Cloud Drive" --quiet
+  echo "  Linking billing account: $BILLING_ACCOUNT..."
+  gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT" --quiet
+  echo "  ✓ Project $PROJECT_ID created and linked to billing."
+fi
+
 if [ -z "$PROJECT_ID" ]; then
   PROJECT_ID=$(gcloud config get-value project 2>/dev/null || true)
 fi
@@ -57,6 +76,7 @@ if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
   echo "Error: No Google Cloud project selected."
   echo "Run: gcloud config set project YOUR_PROJECT_ID"
   echo "Or pass: bash deploy-gcloud.sh --project YOUR_PROJECT_ID"
+  echo "Or pass: bash deploy-gcloud.sh --create-project"
   exit 1
 fi
 
@@ -65,12 +85,24 @@ gcloud config set project "$PROJECT_ID" --quiet
 
 # ── 2. Enable Required Google Cloud APIs ────────────────────────────
 echo "[2/6] Enabling required Google Cloud APIs..."
-gcloud services enable \
+if ! gcloud services enable \
   run.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   storage.googleapis.com \
-  --quiet
+  --quiet; then
+  echo ""
+  echo "======================================================================"
+  echo "ERROR: Permission denied on project '$PROJECT_ID'."
+  echo "Your Google account does not have Owner/Editor permissions on this project."
+  echo ""
+  echo "To resolve:"
+  echo "  1. Run 'bash check-gcloud-projects.sh' to see which projects you own."
+  echo "  2. Or run 'bash deploy-gcloud.sh --create-project' to auto-create a"
+  echo "     fresh project linked to your billing account with 100% Owner rights."
+  echo "======================================================================"
+  exit 1
+fi
 echo "  ✓ Cloud Run, Artifact Registry, Cloud Build & Storage APIs enabled."
 
 # ── 3. Create Artifact Registry Repository ─────────────────────────

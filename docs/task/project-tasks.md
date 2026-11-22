@@ -264,6 +264,14 @@
 - [x] Cataloged 16 inactive, non-billing projects for deletion.
 - [x] Prepared safe automated batch deletion sequence and Cloud Run deployment command targeting `turing-racer-8sjh2`.
 
+## 21. Add Project Permissions Auditor and Auto-Creation to Deployer
+- [x] Analyzed `AUTH_PERMISSION_DENIED` on `turing-racer-8sjh2`: account `venugopalreddyk392@gmail.com` lacks Owner/Editor IAM permissions on this specific sandbox project.
+- [x] Created `check-gcloud-projects.sh` to quickly audit which GCP projects the account owns and whether billing is enabled.
+- [x] Added `--create-project` flag to `deploy-gcloud.sh`: automatically queries the user's active billing account, creates a fresh project (`clouddrive-<timestamp>`), links billing, and deploys without permission conflicts.
+- [x] Added friendly permission failure detection in `deploy-gcloud.sh` with actionable troubleshooting steps.
+- [x] Verified full test suite (`bun test` -> 9/9 pass).
+
+
 
 
 
