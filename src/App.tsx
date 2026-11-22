@@ -24,7 +24,6 @@ import {
   ChevronRight,
   HardDrive,
   Clock,
-  Activity,
   LogOut,
   X,
   Check,
@@ -89,7 +88,6 @@ import {
   revokeUserShare,
   fetchPublicShareInfo,
   getPublicDownloadUrl,
-  fetchActivities,
   fetchStorageBreakdown,
   updateUserProfile,
   changeUserPassword,
@@ -98,7 +96,6 @@ import {
   type QuotaInfo,
   type ShareInfo,
   type UserShareItem,
-  type ActivityItem,
   type StorageBreakdown,
   type FileVersionItem,
 } from "./services/springApi";
@@ -119,7 +116,7 @@ export function App() {
 
   // Navigation & View State
   const [currentView, setCurrentView] = useState<
-    "drive" | "recent" | "starred" | "shared_with_me" | "shares" | "analytics" | "activity" | "trash"
+    "drive" | "recent" | "starred" | "shared_with_me" | "shares" | "analytics" | "trash"
   >("drive");
   const [currentPath, setCurrentPath] = useState<string>("/");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -137,7 +134,6 @@ export function App() {
   const [breakdown, setBreakdown] = useState<StorageBreakdown | null>(null);
   const [shares, setShares] = useState<ShareInfo[]>([]);
   const [sharedWithMe, setSharedWithMe] = useState<UserShareItem[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorAlert, setErrorAlert] = useState<string | null>(null);
   const [successAlert, setSuccessAlert] = useState<string | null>(null);
@@ -261,9 +257,6 @@ export function App() {
       } else if (currentView === "shares") {
         const list = await fetchMyShares();
         setShares(list);
-      } else if (currentView === "activity") {
-        const list = await fetchActivities();
-        setActivities(list);
       } else if (currentView === "analytics") {
         const b = await fetchStorageBreakdown();
         setBreakdown(b);
@@ -1141,21 +1134,6 @@ export function App() {
                 <PieChart className="w-4 h-4" />
                 <span>Storage</span>
               </button>
-
-              <button
-                onClick={() => {
-                  setCurrentView("activity");
-                  setSearchQuery("");
-                }}
-                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                  currentView === "activity"
-                    ? "theme-pill-active font-semibold"
-                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
-                }`}
-              >
-                <Activity className="w-4 h-4" />
-                <span>Activity</span>
-              </button>
             </nav>
           </div>
 
@@ -1247,7 +1225,6 @@ export function App() {
               {currentView === "shared_with_me" && <span className="text-xl font-normal theme-text-main font-sans">Shared with me</span>}
               {currentView === "shares" && <span className="text-xl font-normal theme-text-main font-sans">Public links</span>}
               {currentView === "analytics" && <span className="text-xl font-normal theme-text-main font-sans">Storage</span>}
-              {currentView === "activity" && <span className="text-xl font-normal theme-text-main font-sans">Activity</span>}
               {currentView === "trash" && <span className="text-xl font-normal theme-text-main font-sans">Trash</span>}
             </div>
 
@@ -1517,39 +1494,6 @@ export function App() {
                     <tr>
                       <td colSpan={5} className="py-8 text-center theme-text-muted text-sm">
                         No shared links
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* VIEW: Activity Log */}
-          {currentView === "activity" && (
-            <div className="theme-bg-surface border theme-border rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full text-left text-sm">
-                <thead className="theme-bg-subtle border-b theme-border text-xs uppercase theme-text-muted font-semibold">
-                  <tr>
-                    <th className="py-3 px-4">Action</th>
-                    <th className="py-3 px-4">Target</th>
-                    <th className="py-3 px-4">Details</th>
-                    <th className="py-3 px-4">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y theme-border-subtle">
-                  {activities.map((act) => (
-                    <tr key={act.id} className="hover:theme-bg-hover transition-colors">
-                      <td className="py-3 px-4 font-mono text-xs text-[var(--app-primary-light)]">{act.action}</td>
-                      <td className="py-3 px-4 font-semibold theme-text-main">{act.targetName}</td>
-                      <td className="py-3 px-4 theme-text-muted text-xs">{act.details}</td>
-                      <td className="py-3 px-4 theme-text-faint text-xs">{new Date(act.timestamp).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {activities.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center theme-text-muted text-sm">
-                        No activity
                       </td>
                     </tr>
                   )}

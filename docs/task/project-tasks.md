@@ -140,3 +140,10 @@
 - [x] Executed live end-to-end test verifying file and folder public link generation, unauthenticated info retrieval, and ZIP streaming.
 - [x] Built frontend production assets (`npm run build`) and synced to Spring Boot `backend/src/main/resources/static/`.
 - [x] Tested and verified via backend test suite (`mvn test`) and frontend build (`npm run build`).
+
+## 7. Streamline Sidebar & Views (Activity Removed)
+- [x] Removed Activity item and pulse/waveform icon from left sidebar navigation.
+- [x] Removed Activity log view and table from frontend views.
+- [x] Cleaned navigation state union type (`currentView`) and eliminated unnecessary activity polling.
+- [x] Rebuilt frontend production bundle with 0 errors and synced to Spring Boot static resources.
+- [x] Tested and verified via backend test suite (`mvn test`) and live browser check.
