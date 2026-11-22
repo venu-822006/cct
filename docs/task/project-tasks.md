@@ -192,10 +192,8 @@
   - Removed Public Links view and table.
   - Cleaned Three Dots context menu and action bars to offer standard "Share" (user-to-user sharing) instead of public links.
   - Simplified Share dialog to direct, clean User-to-User sharing modal.
-- [x] Integrated genuine Google reCAPTCHA v2 ("I'm not a robot" checkbox with visual challenge) into `AuthModal.tsx`:
-  - Dynamically loads Google reCAPTCHA v2 API.
-  - Supports configurable site key via `VITE_RECAPTCHA_SITE_KEY` with Google's public test key as default for zero-setup local & staging use.
-  - Added backend `recaptchaToken` verification in `AuthService` and `AuthController` with environment variable `RECAPTCHA_SECRET_KEY`.
-- [x] Authored comprehensive guide `docs/GOOGLE_CLOUD_RECAPTCHA_GUIDE.md` covering Google Cloud Run deployment, Google Secret Manager integration, and Google Cloud Armor Bot Defense (`redirect_to_recaptcha` policy).
-- [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and build (`npm run build` -> 0 errors).
-- [x] Verified live in browser: reCAPTCHA renders, requires verification, passes on click, and dashboard loads cleanly without Public links.
+- [x] Removed all in-app reCAPTCHA code from React frontend (`AuthModal.tsx`) and Spring Boot backend (`AuthService.java`, `LoginRequest.java`, `RegisterRequest.java`) as requested.
+- [x] Streamlined authentication flow for instant, zero-friction local and staging sign-in with clean username/password and password visibility toggle.
+- [x] Authored comprehensive guide `docs/GOOGLE_CLOUD_RECAPTCHA_GUIDE.md` detailing how to configure Google Cloud Armor with edge reCAPTCHA bot defense at the Cloud Load Balancer level (zero code needed in container).
+- [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and production build (`npm run build` -> 0 errors).
+- [x] Live browser verified: instant sign-in without CAPTCHA, clean Google Drive dashboard, and zero Public links.

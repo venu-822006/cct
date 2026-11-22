@@ -19,8 +19,6 @@ public class RegisterRequest {
 
     private String fullName;
 
-    private String recaptchaToken;
-
     public RegisterRequest() {}
 
     public String getUsername() { return username; }
@@ -34,7 +32,4 @@ public class RegisterRequest {
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
-
-    public String getRecaptchaToken() { return recaptchaToken; }
-    public void setRecaptchaToken(String recaptchaToken) { this.recaptchaToken = recaptchaToken; }
 }

@@ -161,17 +161,17 @@ export interface StorageBreakdown {
 }
 
 // Auth APIs
-export async function registerUser(username: string, email: string, password: string, fullName?: string, recaptchaToken?: string) {
+export async function registerUser(username: string, email: string, password: string, fullName?: string) {
   return requestJson<UserProfile>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ username, email, password, fullName, recaptchaToken }),
+    body: JSON.stringify({ username, email, password, fullName }),
   });
 }
 
-export async function loginUser(username: string, password: string, recaptchaToken?: string) {
+export async function loginUser(username: string, password: string) {
   return requestJson<UserProfile>("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ username, password, recaptchaToken }),
+    body: JSON.stringify({ username, password }),
   });
 }
 
