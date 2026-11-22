@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, User, Mail, UserCheck, ArrowRight } from "lucide-react";
+import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { loginUser, registerUser, setAuthToken, type UserProfile } from "../services/springApi";
 import { useTheme } from "../hooks/useTheme";
 import { DriveLogo } from "./DriveLogo";
@@ -16,6 +16,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -196,13 +197,22 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 theme-text-muted" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full theme-bg-subtle border theme-border rounded-xl pl-10 pr-4 py-2.5 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)] focus:bg-white dark:focus:bg-[#1e1f20] transition-colors"
+                className="w-full theme-bg-subtle border theme-border rounded-xl pl-10 pr-10 py-2.5 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)] focus:bg-white dark:focus:bg-[#1e1f20] transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-main p-1 rounded-md focus:outline-none cursor-pointer transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

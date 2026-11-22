@@ -147,3 +147,11 @@
 - [x] Cleaned navigation state union type (`currentView`) and eliminated unnecessary activity polling.
 - [x] Rebuilt frontend production bundle with 0 errors and synced to Spring Boot static resources.
 - [x] Tested and verified via backend test suite (`mvn test`) and live browser check.
+
+## 8. Password Visibility Eye Toggle Button
+- [x] Added interactive Eye (`Eye` / `EyeOff`) visibility toggle button to all password inputs:
+  - `AuthModal` (Sign In and Account Registration password field)
+  - `App.tsx` Account Settings modal (Current Password and New Password fields)
+- [x] Implemented toggling state between `type="password"` (masked with bullets) and `type="text"` (plain text) with smooth transition and icon swap.
+- [x] Enhanced input padding (`pr-10`) so text never overlaps the eye toggle button.
+- [x] Verified frontend build (`npm run build` -> 0 errors) and backend unit test suite (`mvn test` -> 8/8 passing).

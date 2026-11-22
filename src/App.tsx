@@ -14,6 +14,7 @@ import {
   Link2,
   Download,
   Eye,
+  EyeOff,
   Edit3,
   MoreVertical,
   Plus,
@@ -178,6 +179,8 @@ export function App() {
   const [profileEmail, setProfileEmail] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Drag and drop & File input
   const [isDragging, setIsDragging] = useState(false);
@@ -2418,23 +2421,45 @@ export function App() {
                 <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">Security & Password</p>
                 <div>
                   <label className="block text-xs theme-text-muted mb-1">Current Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showOldPassword ? "text" : "password"}
+                      required
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      className="w-full theme-bg-input border theme-border rounded-xl pl-3 pr-10 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-main p-1 rounded-md focus:outline-none cursor-pointer transition-colors"
+                      aria-label={showOldPassword ? "Hide current password" : "Show current password"}
+                      title={showOldPassword ? "Hide current password" : "Show current password"}
+                    >
+                      {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs theme-text-muted mb-1">New Password (min 6 chars)</label>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full theme-bg-input border theme-border rounded-xl px-3 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full theme-bg-input border theme-border rounded-xl pl-3 pr-10 py-2 text-sm theme-text-main focus:outline-none focus:border-[var(--app-border-focus)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-main p-1 rounded-md focus:outline-none cursor-pointer transition-colors"
+                      aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                      title={showNewPassword ? "Hide new password" : "Show new password"}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="submit"
