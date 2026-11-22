@@ -30,10 +30,17 @@ export async function request(endpoint: string, options: RequestInit = {}) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      ...options,
+      headers,
+    });
+  } catch (err: any) {
+    throw new Error(
+      "Unable to connect to the backend server. Please verify that the application is running on port 8080 in Cloud Shell."
+    );
+  }
 
   if (response.status === 401 || response.status === 403 || (endpoint === "/api/auth/me" && !response.ok)) {
     if (!endpoint.includes("/api/auth/login") && !endpoint.includes("/api/auth/register")) {

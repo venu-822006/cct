@@ -212,6 +212,12 @@
 - [x] Verified that in-app reCAPTCHA is completely removed from all source code and built bundles.
 - [x] Ran full test suite (`bun test` -> 9/9 pass, `mvn test` -> 8/8 pass, BUILD SUCCESS).
 
+## 16. Improve Network Error Feedback for Cloud Shell
+- [x] Added friendly network error handler in `src/services/springApi.ts` catching `fetch()` network failures and providing actionable guidance when the backend server on port 8080 is unreachable.
+- [x] Rebuilt frontend bundle (`index-BWeXUHhb.js`) and updated Spring Boot static resources.
+- [x] Verified full test suite (`bun test` -> 9/9 pass).
+
+
 ## 16. Cloud Shell Upload "Failed to Fetch" Final Resolution
 - [x] Permitted `HttpMethod.OPTIONS` globally in `SecurityConfig.java` to prevent CORS preflight rejections by the Cloud Shell HTTPS reverse proxy.
 - [x] Bypassed `OPTIONS` requests in `JwtAuthenticationFilter.java` so preflights are never evaluated for missing JWT tokens.
