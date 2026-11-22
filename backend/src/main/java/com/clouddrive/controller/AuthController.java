@@ -2,8 +2,11 @@ package com.clouddrive.controller;
 
 import com.clouddrive.dto.*;
 import com.clouddrive.entity.User;
+import com.clouddrive.security.RateLimitingService;
 import com.clouddrive.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,13 +19,34 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final RateLimitingService rateLimitingService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, RateLimitingService rateLimitingService) {
         this.authService = authService;
+        this.rateLimitingService = rateLimitingService;
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xf = request.getHeader("X-Forwarded-For");
+        if (xf != null && !xf.isBlank()) {
+            return xf.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        if (!rateLimitingService.allowRegister(clientIp)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", "60")
+                    .body(Map.of("error", "Too many registration attempts. Please wait 1 minute before trying again."));
+        }
+
         try {
             AuthResponse response = authService.register(request);
             return ResponseEntity.ok(response);
@@ -34,7 +58,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        if (!rateLimitingService.allowLogin(clientIp)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", "60")
+                    .body(Map.of("error", "Too many login attempts. Please wait 1 minute before trying again."));
+        }
+
         try {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);

@@ -38,7 +38,14 @@ app:
 
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours (1 full day)
+
+  security:
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      login-limit: ${RATE_LIMIT_LOGIN:10} # max 10 login attempts per minute per IP
+      register-limit: ${RATE_LIMIT_REGISTER:5} # max 5 registration attempts per minute per IP
+      window-seconds: 60
 
 logging:
   level:

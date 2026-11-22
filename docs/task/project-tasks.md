@@ -217,6 +217,16 @@
 - [x] Rebuilt frontend bundle (`index-BWeXUHhb.js`) and updated Spring Boot static resources.
 - [x] Verified full test suite (`bun test` -> 9/9 pass).
 
+## 17. 1-Day Login Session & Sliding Window Rate Limiting
+- [x] Configured and verified 1-day (24 hours / 86,400,000 ms) JWT session lifetime in both `application.yml` and `application-gcloud.yml`.
+- [x] Implemented thread-safe `RateLimitingService.java` using sliding window counter with client IP resolution (respecting `X-Forwarded-For` and `X-Real-IP`).
+- [x] Integrated rate limiting in `AuthController.java`:
+  - Login: Maximum 10 attempts per minute per IP. Returns HTTP 429 Too Many Requests with `Retry-After: 60` header when exceeded.
+  - Registration: Maximum 5 attempts per minute per IP. Returns HTTP 429 Too Many Requests when exceeded.
+- [x] Added unit tests in `CloudDriveApplicationTests.java` verifying 10-attempt threshold enforcement and reset capabilities.
+- [x] Verified complete test suites: `mvn test` (9/9 pass, BUILD SUCCESS) and `bun test` (9/9 pass).
+
+
 
 ## 16. Cloud Shell Upload "Failed to Fetch" Final Resolution
 - [x] Permitted `HttpMethod.OPTIONS` globally in `SecurityConfig.java` to prevent CORS preflight rejections by the Cloud Shell HTTPS reverse proxy.

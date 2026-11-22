@@ -34,4 +34,10 @@ app:
     default-quota-bytes: 524288000 # 500 MB per user
   jwt:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A
-    expiration-ms: 86400000 # 24 hours
+    expiration-ms: 86400000 # 24 hours (1 full day)
+  security:
+    rate-limit:
+      enabled: true
+      login-limit: 10 # max 10 login attempts per minute per IP
+      register-limit: 5 # max 5 registration attempts per minute per IP
+      window-seconds: 60

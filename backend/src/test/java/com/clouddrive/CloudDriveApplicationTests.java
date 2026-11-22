@@ -4,6 +4,7 @@ import com.clouddrive.dto.*;
 import com.clouddrive.entity.User;
 import com.clouddrive.repository.UserRepository;
 import com.clouddrive.security.JwtTokenProvider;
+import com.clouddrive.security.RateLimitingService;
 import com.clouddrive.service.AuthService;
 import com.clouddrive.service.FileStorageService;
 import com.clouddrive.service.ShareService;
@@ -34,6 +35,9 @@ class CloudDriveApplicationTests {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private RateLimitingService rateLimitingService;
 
     private String uid() {
         return String.valueOf(System.nanoTime());
@@ -260,5 +264,23 @@ class CloudDriveApplicationTests {
         org.springframework.core.io.Resource res = shareService.getSharedFileResource(fileShare.getToken());
         assertNotNull(res);
         assertTrue(res.exists());
+    }
+
+    @Test
+    void testRateLimiting() {
+        String testIp = "192.168.1.100";
+        rateLimitingService.reset(testIp);
+
+        // Should allow 10 login attempts
+        for (int i = 0; i < 10; i++) {
+            assertTrue(rateLimitingService.allowLogin(testIp), "Attempt " + (i + 1) + " should be allowed");
+        }
+
+        // 11th attempt must be rejected by rate limiting
+        assertFalse(rateLimitingService.allowLogin(testIp), "11th attempt should be blocked");
+
+        // Reset clears the limit
+        rateLimitingService.reset(testIp);
+        assertTrue(rateLimitingService.allowLogin(testIp), "Attempt after reset should be allowed");
     }
 }
