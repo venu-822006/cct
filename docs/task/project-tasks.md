@@ -325,6 +325,23 @@
 - [x] Verified live deployment on `https://cct-3c4n.onrender.com` with real browser subagent: verified login, file upload (`test.txt`), file preview modal, and folder creation (`Test Folder`).
 - [x] Verified all test suites pass: `bun test` (9/9 passed) and `mvn test` (9/9 passed, BUILD SUCCESS).
 
+## 28. Comprehensive Production Hardening & Safe Branch Merge
+- [x] Externalized hardcoded JWT secret to `JWT_SECRET` environment variable with dynamic ephemeral 256-bit key generator for dev/test runs.
+- [x] Removed hardcoded admin account creation; implemented opt-in environment bootstrapping via `ADMIN_BOOTSTRAP_ENABLED=true`.
+- [x] Implemented canonical path traversal checks (`validatePathInsideUserRoot`) and rejection of `..` across all folder and file write operations.
+- [x] Fixed public folder ZIP download isolation: sibling folders (`/Projects` vs `/Projects-Secret`) are never leaked.
+- [x] Implemented recursive virtual path updating for all descendants upon folder rename and move.
+- [x] Implemented recursive trashing and restoration for all folder descendants in Recycle Bin.
+- [x] Enforced user storage quota checks on blank file creation and file content edits.
+- [x] Isolated genuinely public share endpoints in `SecurityConfig.java`, disabled H2 console by default in production, and made CORS origins configurable.
+- [x] Restricted JWT URL query parameter extraction strictly to streaming endpoints.
+- [x] Removed machine-specific `backend/run.args` from Git tracking and added to `.gitignore`.
+- [x] Expanded backend integration test suite to 12 tests (`CloudDriveApplicationTests.java`): 12/12 passing (BUILD SUCCESS).
+- [x] Rebuilt frontend production bundle with 0 errors (`bun run build`).
+- [x] Verified frontend tests (`bun test`): 9/9 passing.
+- [x] Merged `production-hardening` branch into `main` and pushed to GitHub `origin/main` (`fb42bce`).
+
+
 
 
 
