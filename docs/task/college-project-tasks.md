@@ -90,3 +90,7 @@
 - [x] Streamlined UI to match clean drive interface design and stripped all verbose sentences, helper descriptions, and unwanted writeups across header, sidebar, modals, tables, empty states, and authentication screens.
 - [x] Removed Google Drive trademark logos and Google-specific icons; introduced clean custom `DriveLogo` cloud mark while preserving the modern clean interface.
 - [x] Verified test suite (`bun test` -> 24/24 pass) and production build (`bun run build` -> 0 errors).
+- [x] Created `backend/src/main/resources/application-gcloud.yml` Spring profile for Google Cloud Run deployment (env-var-driven datasource, GCS storage type, production logging, 5 GB quota, H2 console disabled).
+- [x] Updated `cloudbuild.yaml` to use Artifact Registry instead of Container Registry, added `--set-env-vars SPRING_PROFILES_ACTIVE=gcloud`, JWT secret from Cloud Secret Manager, memory/CPU/instance scaling options.
+- [x] Updated `deploy-cloudshell.sh`: structured 5-step build process, activates `gcloud` Spring profile, clean progress output, `--project` flag support.
+- [x] Pushed all changes (UI + Cloud config) to GitHub `https://github.com/venu-822006/cct.git` branch `main`.

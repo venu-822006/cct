@@ -1,0 +1,45 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: cloud-drive
+
+  # ── Cloud SQL (PostgreSQL via Unix socket on Cloud Run) ──────────────
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:clouddrivedb}
+    driverClassName: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    database-platform: ${JPA_PLATFORM:org.hibernate.dialect.H2Dialect}
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  # Disable H2 console in production
+  h2:
+    console:
+      enabled: false
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 105MB
+
+app:
+  storage:
+    # Set to "gcs" to use Google Cloud Storage, otherwise local
+    type: ${STORAGE_TYPE:local}
+    base-dir: ${APP_STORAGE_BASE_DIR:/tmp/storage_root}
+    gcs-bucket: ${GCS_BUCKET:}
+    default-quota-bytes: 5368709120 # 5 GB per user on cloud
+
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+logging:
+  level:
+    com.clouddrive: INFO
+    org.springframework.web: WARN

@@ -1,31 +1,75 @@
 #!/usr/bin/env bash
 # ===================================================================
-# Personal Cloud Drive - Google Cloud Shell Launcher (Zero Billing)
+# Cloud Drive — Google Cloud Shell Launcher
+# Run this script inside Google Cloud Shell to build and start the app
+# Usage: bash deploy-cloudshell.sh [--project PROJECT_ID]
 # ===================================================================
 
 set -e
 
-echo "=== 1/4 Checking Java and Node environment in Google Cloud Shell ==="
-java -version
-node -v
+# ── Parse args ──────────────────────────────────────────────────────
+PROJECT_ID=""
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --project) PROJECT_ID="$2"; shift ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+  shift
+done
 
-echo "=== 2/4 Building React Frontend Assets ==="
+if [ -n "$PROJECT_ID" ]; then
+  gcloud config set project "$PROJECT_ID"
+fi
+
+echo "=== Cloud Drive — Cloud Shell Build & Run ==="
+echo ""
+
+# ── Environment check ───────────────────────────────────────────────
+echo "[1/5] Checking environment..."
+java -version 2>&1 | head -1
+node --version
+echo ""
+
+# ── Frontend build ───────────────────────────────────────────────────
+echo "[2/5] Building React frontend..."
 if [ -f "package-lock.json" ]; then
-    npm ci
+    npm ci --silent
 else
-    npm install
+    npm install --silent
 fi
 npm run build
+echo "  ✓ Frontend built → dist/"
+echo ""
 
-echo "=== 3/4 Copying Frontend Dist into Spring Boot Static Resources ==="
+# ── Copy frontend into Spring Boot static resources ──────────────────
+echo "[3/5] Copying frontend into Spring Boot static resources..."
 mkdir -p backend/src/main/resources/static
+rm -rf backend/src/main/resources/static/*
 cp -r dist/* backend/src/main/resources/static/
+echo "  ✓ Copied to backend/src/main/resources/static/"
+echo ""
 
-echo "=== 4/4 Packaging and Starting Spring Boot Cloud Drive on Port 8080 ==="
+# ── Build Spring Boot backend ────────────────────────────────────────
+echo "[4/5] Building Spring Boot backend..."
 cd backend
-chmod +x ./mvnw || true
+chmod +x ./mvnw 2>/dev/null || true
 if [ -f "./mvnw" ]; then
-    ./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8080"
+    ./mvnw clean package -DskipTests -q
 else
-    mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8080"
+    mvn clean package -DskipTests -q
 fi
+cd ..
+echo "  ✓ JAR built → backend/target/"
+echo ""
+
+# ── Start the app ────────────────────────────────────────────────────
+echo "[5/5] Starting Cloud Drive on port 8080..."
+echo "  Open the Web Preview (port 8080) in Cloud Shell toolbar"
+echo ""
+
+JAR=$(ls backend/target/*.jar | head -1)
+exec java \
+  -Dserver.port=8080 \
+  -Dspring.profiles.active=gcloud \
+  -Djava.security.egd=file:/dev/./urandom \
+  -jar "$JAR"

@@ -107,6 +107,25 @@ import { useTheme } from "./hooks/useTheme";
 import { THEMES, THEME_CONFIGS } from "./constants";
 import { DriveLogo } from "./components/DriveLogo";
 
+export function GooglePlusIcon({ className = "w-7 h-7" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 36 36">
+      <path fill="#4285F4" d="M16 16v14h4V20z"/>
+      <path fill="#34A853" d="M30 16H20v4h10z"/>
+      <path fill="#FBBC05" d="M20 16V6h-4v10z"/>
+      <path fill="#EA4335" d="M6 16h10v4H6z"/>
+    </svg>
+  );
+}
+
+export function GoogleWaffleIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 20c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+    </svg>
+  );
+}
+
 export function App() {
   const [theme, setTheme] = useTheme();
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -819,6 +838,13 @@ export function App() {
             <Settings className="w-5 h-5" />
           </button>
 
+          <button
+            title="Google Apps"
+            className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-sub hover:theme-text-main transition-colors cursor-pointer hidden sm:block"
+          >
+            <GoogleWaffleIcon className="w-5 h-5" />
+          </button>
+
           <div className="flex items-center gap-2 pl-2">
             <div
               className="w-9 h-9 rounded-full bg-[#0b57d0] text-white flex items-center justify-center font-medium text-sm shadow-xs select-none"
@@ -851,7 +877,7 @@ export function App() {
                 onClick={() => setNewMenuOpen(!newMenuOpen)}
                 className="gdrive-new-btn h-14 px-6 rounded-2xl flex items-center gap-3 font-medium text-sm transition-all cursor-pointer shadow-md"
               >
-                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <GooglePlusIcon className="w-7 h-7" />
                 <span className="font-semibold text-sm tracking-wide">New</span>
               </button>
 
