@@ -40,6 +40,9 @@ public class FileStorageService {
     @Value("${app.storage.base-dir}")
     private String baseDir;
 
+    @Value("${app.storage.default-quota-bytes:524288000}")
+    private long defaultQuotaBytes;
+
     public FileStorageService(FileItemRepository fileItemRepository,
                               UserRepository userRepository,
                               ShareLinkRepository shareLinkRepository,
@@ -215,10 +218,13 @@ public class FileStorageService {
             incomingTotalSize += file.getSize();
         }
 
-        Long currentUsed = fileItemRepository.sumUsedBytesByOwner(user);
-        if (currentUsed + incomingTotalSize > user.getQuotaBytes()) {
+        Long rawCurrentUsed = fileItemRepository.sumUsedBytesByOwner(user);
+        long currentUsed = rawCurrentUsed != null ? rawCurrentUsed : 0L;
+        long quota = user.getQuotaBytes() > 0 ? user.getQuotaBytes() : defaultQuotaBytes;
+
+        if (currentUsed + incomingTotalSize > quota) {
             throw new IllegalArgumentException("Storage quota exceeded! Available space: "
-                    + ((user.getQuotaBytes() - currentUsed) / (1024 * 1024)) + " MB.");
+                    + ((quota - currentUsed) / (1024 * 1024)) + " MB.");
         }
 
         List<FileItemDTO> uploaded = new ArrayList<>();

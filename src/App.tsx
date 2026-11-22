@@ -2354,7 +2354,9 @@ export function App() {
               <span className="text-sm font-semibold theme-text-main">
                 {uploadQueue.some((q) => q.status === "uploading")
                   ? `Uploading ${uploadQueue.length} item${uploadQueue.length > 1 ? "s" : ""}...`
-                  : `${uploadQueue.length} upload${uploadQueue.length > 1 ? "s" : ""} complete`}
+                  : uploadQueue.every((q) => q.status === "completed")
+                  ? `${uploadQueue.length} upload${uploadQueue.length > 1 ? "s" : ""} complete`
+                  : `${uploadQueue.filter((q) => q.status === "error").length} upload failed`}
               </span>
             </div>
             <div className="flex items-center gap-1">

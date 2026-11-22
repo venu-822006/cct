@@ -197,3 +197,10 @@
 - [x] Authored comprehensive guide `docs/GOOGLE_CLOUD_RECAPTCHA_GUIDE.md` detailing how to configure Google Cloud Armor with edge reCAPTCHA bot defense at the Cloud Load Balancer level (zero code needed in container).
 - [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and production build (`npm run build` -> 0 errors).
 - [x] Live browser verified: instant sign-in without CAPTCHA, clean Google Drive dashboard, and zero Public links.
+
+## 14. Fix Upload "Failed to Fetch" & Cloud Shell Forwarding
+- [x] Fixed `NullPointerException` during file upload in `FileStorageService.java`: safely guarded `sumUsedBytesByOwner` null unboxing for new users with 0 files.
+- [x] Hardened `FileController.java` to catch all general exceptions and return structured JSON error responses rather than letting exceptions escape and trigger Tomcat connection resets.
+- [x] Added `server.forward-headers-strategy: framework` and `server.tomcat.max-swallow-size: -1` in both `application.yml` and `application-gcloud.yml` to prevent connection resets behind Cloud Shell Web Preview reverse proxy.
+- [x] Updated upload floating popup widget status message in `App.tsx` to accurately display failure count (`1 upload failed`) when an upload error occurs.
+- [x] Verified full build and live file upload: 200 OK with immediate persistence.

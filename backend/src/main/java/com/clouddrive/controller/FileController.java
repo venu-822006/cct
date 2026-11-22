@@ -106,7 +106,9 @@ public class FileController {
             List<FileItemDTO> uploaded = fileStorageService.uploadFiles(getUser(userDetails), path, files);
             return ResponseEntity.ok(uploaded);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Invalid upload request"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Failed to upload file"));
         }
     }
 
