@@ -64,10 +64,19 @@ echo ""
 
 # ── Start the app ────────────────────────────────────────────────────
 echo "[5/5] Starting Cloud Drive on port 8080..."
+echo "  Checking and freeing port 8080..."
+fuser -k 8080/tcp 2>/dev/null || true
+pkill -f personal-cloud-drive 2>/dev/null || true
+sleep 1
+
 echo "  Open the Web Preview (port 8080) in Cloud Shell toolbar"
 echo ""
 
-JAR=$(ls backend/target/*.jar | head -1)
+JAR=$(find backend/target -maxdepth 1 -name "*.jar" ! -name "*.original" | head -1)
+if [ -z "$JAR" ]; then
+  JAR=$(ls backend/target/*.jar | head -1)
+fi
+echo "  Starting JAR: $JAR"
 exec java \
   -Dserver.port=8080 \
   -Dspring.profiles.active=gcloud \

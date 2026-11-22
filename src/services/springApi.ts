@@ -20,8 +20,13 @@ export async function request(endpoint: string, options: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Don't set Content-Type for FormData
-  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+  const isFormData =
+    typeof FormData !== "undefined" &&
+    (options.body instanceof FormData || (options.body && typeof (options.body as any).append === "function"));
+
+  if (isFormData) {
+    headers.delete("Content-Type");
+  } else if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 

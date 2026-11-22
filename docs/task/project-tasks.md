@@ -205,3 +205,10 @@
 - [x] Added `server.forward-headers-strategy: framework` and `server.tomcat.max-swallow-size: -1` in both `application.yml` and `application-gcloud.yml` to prevent connection resets behind Cloud Shell Web Preview reverse proxy.
 - [x] Updated upload floating popup widget status message in `App.tsx` to accurately display failure count (`1 upload failed`) when an upload error occurs.
 - [x] Verified full build and live file upload: 200 OK with immediate persistence.
+
+## 15. Cloud Shell Port 8080 Cleanup & Stale Cache Resolution
+- [x] Resolved "Web server failed to start. Port 8080 was already in use" error in `deploy-cloudshell.sh` by adding automatic port cleanup (`fuser -k 8080/tcp` and `pkill -f personal-cloud-drive`).
+- [x] Cleaned and rebuilt fresh production assets to `backend/src/main/resources/static/`.
+- [x] Verified that in-app reCAPTCHA is completely removed from all source code and built bundles.
+- [x] Ran full test suite (`bun test` -> 9/9 pass, `mvn test` -> 8/8 pass, BUILD SUCCESS).
+
