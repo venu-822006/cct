@@ -16,7 +16,9 @@ if ! command -v cloudflared &>/dev/null; then
     curl -sSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" -o "$CLOUDFLARED_BIN"
     chmod +x "$CLOUDFLARED_BIN"
   fi
-  export PATH="$HOME/bin:$PATH"
+  CMD="$CLOUDFLARED_BIN"
+else
+  CMD="cloudflared"
 fi
 
 echo "=========================================================="
@@ -30,4 +32,4 @@ echo "   ✓ No billing account required"
 echo "=========================================================="
 echo ""
 
-cloudflared tunnel --url http://localhost:8080
+exec "$CMD" tunnel --url http://localhost:8080
