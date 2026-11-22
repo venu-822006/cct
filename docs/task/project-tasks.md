@@ -178,3 +178,10 @@
 - [x] Removed human verification CAPTCHA and honeypot from `AuthModal.tsx` for clean, instant sign-in and registration.
 - [x] Purged 21 unused legacy prototype files across `src/components/`, `src/hooks/`, `src/services/`, and `tests/storage/`.
 - [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and build (`npm run build` -> 0 errors).
+
+## 12. Vite API Proxy & Non-JSON Fallback Hardening
+- [x] Fixed Vite development server proxy in `vite.config.ts` targeting IPv4 `http://127.0.0.1:8080`.
+- [x] Restarted Vite dev server daemon to apply proxy rules for all `/api/*` endpoints.
+- [x] Hardened `requestJson` in `springApi.ts` to detect HTML SPA fallbacks (`text/html`) and throw structured errors instead of passing corrupt payload to React state.
+- [x] Added defensive array validation (`Array.isArray(items)`) in `App.tsx` preventing `items.filter is not a function` runtime crashes.
+- [x] Verified complete flow in live browser: clean AuthModal load, registration, login, and full Google Drive explorer dashboard rendering.

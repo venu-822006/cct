@@ -743,7 +743,7 @@ export function App() {
   };
 
   // Filtering & Sorting
-  const filteredItems = items
+  const filteredItems = (Array.isArray(items) ? items : [])
     .filter((item) => {
       if (selectedFilter === "all") return true;
       const ext = item.extension.toLowerCase();
@@ -1527,7 +1527,7 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y theme-border-subtle">
-                  {sharedWithMe.map((share) => (
+                  {(Array.isArray(sharedWithMe) ? sharedWithMe : []).map((share) => (
                     <tr key={share.id} className="hover:theme-bg-hover transition-colors">
                       <td className="py-3 px-4 font-semibold theme-text-main flex items-center gap-2">
                         {getFileIcon(share.fileItem)}
@@ -1577,7 +1577,7 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y theme-border-subtle">
-                  {shares.map((share) => (
+                  {(Array.isArray(shares) ? shares : []).map((share) => (
                     <tr key={share.id} className="hover:theme-bg-hover transition-colors">
                       <td className="py-3 px-4 font-semibold theme-text-main">{share.fileName}</td>
                       <td className="py-3 px-4 theme-text-muted text-xs">{formatBytes(share.fileSize)}</td>

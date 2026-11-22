@@ -42,12 +42,20 @@ export async function request(endpoint: string, options: RequestInit = {}) {
 export async function requestJson<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await request(endpoint, options);
   const text = await response.text();
-  let data: any = null;
+  const contentType = response.headers.get("content-type") || "";
 
+  if (response.ok && contentType.includes("text/html")) {
+    throw new Error("Received HTML response instead of JSON. The backend server proxy may not be connected.");
+  }
+
+  let data: any = null;
   if (text && text.trim().length > 0) {
     try {
       data = JSON.parse(text);
     } catch {
+      if (response.ok) {
+        throw new Error("Invalid JSON response from server.");
+      }
       data = { message: text };
     }
   } else {
