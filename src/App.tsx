@@ -33,6 +33,8 @@ import {
   RefreshCw,
   FolderPlus,
   AlertCircle,
+  CheckCircle2,
+  ChevronUp,
   FileCheck,
   RotateCcw,
   Users,
@@ -173,14 +175,28 @@ export function App() {
   const [editorItem, setEditorItem] = useState<{ id: number; name: string; content: string } | null>(null);
   const [editorSaving, setEditorSaving] = useState(false);
 
-  // Settings / Profile Modal
+  // Settings / Profile Modal & Popover
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Floating Upload Progress Popup Widget at Right End
+  interface UploadQueueItem {
+    id: string;
+    name: string;
+    size: number;
+    status: "uploading" | "completed" | "error";
+    progress: number;
+  }
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
+  const [uploadPopupOpen, setUploadPopupOpen] = useState(false);
+  const [uploadPopupMinimized, setUploadPopupMinimized] = useState(false);
 
   // Drag and drop & File input
   const [isDragging, setIsDragging] = useState(false);
@@ -214,11 +230,16 @@ export function App() {
       .finally(() => setAuthLoading(false));
   }, []);
 
-  // Close Three Dots Menu when clicking outside
+  // Close Three Dots Menu & Profile Menu when clicking outside
   useEffect(() => {
-    const handleDocClick = () => setActiveMenuId(null);
-    window.addEventListener("click", handleDocClick);
-    return () => window.removeEventListener("click", handleDocClick);
+    const handleDocClick = (e: MouseEvent) => {
+      setActiveMenuId(null);
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleDocClick);
+    return () => window.removeEventListener("mousedown", handleDocClick);
   }, []);
 
   // 2. Load View Data
@@ -279,17 +300,36 @@ export function App() {
     setTimeout(() => setSuccessAlert(null), 4000);
   };
 
-  // Upload Handlers
+  // Upload Handlers with Floating Popup Tracking
   const handleUploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const fileArr = Array.from(files);
+
+    const queueItems = fileArr.map((f, i) => ({
+      id: `${Date.now()}-${i}`,
+      name: f.name,
+      size: f.size,
+      status: "uploading" as const,
+      progress: 60,
+    }));
+
+    setUploadQueue(queueItems);
+    setUploadPopupOpen(true);
+    setUploadPopupMinimized(false);
     setLoading(true);
+
     try {
-      const fileArr = Array.from(files);
       await uploadFiles(currentPath, fileArr);
+      setUploadQueue((prev) =>
+        prev.map((item) => ({ ...item, status: "completed" as const, progress: 100 }))
+      );
       notifySuccess(`Uploaded ${fileArr.length} file(s) successfully`);
       loadCurrentViewData();
       loadQuota();
     } catch (err: any) {
+      setUploadQueue((prev) =>
+        prev.map((item) => ({ ...item, status: "error" as const, progress: 0 }))
+      );
       setErrorAlert(err.message || "Upload failed");
     } finally {
       setLoading(false);
@@ -841,8 +881,22 @@ export function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen theme-bg-app flex items-center justify-center transition-colors">
-        <div className="w-8 h-8 border-3 border-[var(--app-border-focus)] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen theme-bg-app flex flex-col items-center justify-center transition-colors duration-300">
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-blue-500/20 dark:bg-blue-400/20 blur-2xl rounded-full scale-150 animate-pulse" />
+            <DriveLogo className="w-20 h-20 relative z-10 animate-drive-float" />
+          </div>
+          <h2 className="text-2xl font-normal theme-text-main tracking-tight font-sans mb-3">
+            Cloud Drive
+          </h2>
+          <div className="w-48 h-1 bg-[var(--app-surface-subtle)] rounded-full overflow-hidden relative border theme-border-subtle">
+            <div className="absolute top-0 bottom-0 left-0 bg-[#0b57d0] dark:bg-[#a8c7fa] rounded-full animate-drive-loader" />
+          </div>
+          <p className="text-xs theme-text-muted mt-3 font-medium animate-pulse">
+            Loading your workspace...
+          </p>
+        </div>
       </div>
     );
   }
@@ -943,23 +997,87 @@ export function App() {
 
 
 
-          <div className="flex items-center gap-2 pl-2">
-            <div
-              className="w-9 h-9 rounded-full bg-[#0b57d0] text-white flex items-center justify-center font-medium text-sm shadow-xs select-none"
+          <div className="relative pl-1 sm:pl-2" ref={profileMenuRef}>
+            <button
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="w-9 h-9 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white flex items-center justify-center font-medium text-sm shadow-xs hover:ring-2 hover:ring-[var(--app-primary-soft)] transition-all cursor-pointer select-none"
               title={`${user.fullName || user.username} (@${user.username})`}
+              aria-label="Account options"
             >
               {(user.fullName || user.username).charAt(0).toUpperCase()}
-            </div>
-            <button
-              onClick={() => {
-                clearAuthToken();
-                setUser(null);
-              }}
-              title="Sign Out"
-              className="p-2 rounded-full hover:bg-red-500/10 hover:text-red-500 theme-text-muted transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
             </button>
+
+            {profileMenuOpen && (
+              <div className="absolute right-0 top-12 w-80 theme-bg-surface border theme-border rounded-3xl shadow-2xl p-5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* Account Header */}
+                <div className="flex flex-col items-center text-center pb-4 border-b theme-border-subtle">
+                  <div className="w-16 h-16 rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-2xl font-semibold mb-3 shadow-md ring-4 ring-blue-500/10 select-none">
+                    {(user.fullName || user.username).charAt(0).toUpperCase()}
+                  </div>
+                  <h4 className="text-base font-semibold theme-text-main leading-snug">
+                    {user.fullName || user.username}
+                  </h4>
+                  <p className="text-xs theme-text-muted mt-0.5 font-mono">
+                    @{user.username}
+                  </p>
+                  {user.email && (
+                    <p className="text-xs theme-text-sub mt-1">
+                      {user.email}
+                    </p>
+                  )}
+                </div>
+
+                {/* Storage Quota preview */}
+                <div className="py-3.5 border-b theme-border-subtle">
+                  <div className="flex items-center justify-between text-xs theme-text-sub mb-1.5">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Cloud className="w-3.5 h-3.5 theme-text-muted" />
+                      Storage
+                    </span>
+                    <span className="font-semibold theme-text-main">
+                      {formatBytes(quota?.usedBytes || 0)} / {formatBytes(quota?.quotaBytes || 524288000)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#e0e2ec] dark:bg-[#3c4043] rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-[#0b57d0] dark:bg-[#a8c7fa] h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round(((quota?.usedBytes || 0) / (quota?.quotaBytes || 1)) * 100)
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-3 space-y-1.5">
+                  <button
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      setSettingsOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold theme-text-main hover:theme-bg-hover transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 theme-text-muted" />
+                    <span>Account Settings</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      clearAuthToken();
+                      setUser(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -2470,6 +2588,79 @@ export function App() {
               </form>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Upload & Progress Popup Widget at Right End */}
+      {uploadPopupOpen && uploadQueue.length > 0 && (
+        <div className="fixed bottom-5 right-6 z-40 w-80 md:w-96 shadow-2xl rounded-2xl theme-bg-surface border theme-border overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
+          {/* Header */}
+          <div className="h-12 px-4 theme-bg-subtle border-b theme-border-subtle flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {uploadQueue.some((q) => q.status === "uploading") ? (
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              ) : uploadQueue.every((q) => q.status === "completed") ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              )}
+              <span className="text-sm font-semibold theme-text-main">
+                {uploadQueue.some((q) => q.status === "uploading")
+                  ? `Uploading ${uploadQueue.length} item${uploadQueue.length > 1 ? "s" : ""}...`
+                  : `${uploadQueue.length} upload${uploadQueue.length > 1 ? "s" : ""} complete`}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setUploadPopupMinimized(!uploadPopupMinimized)}
+                className="p-1 rounded-md theme-text-muted hover:theme-text-main hover:theme-bg-hover transition-colors cursor-pointer"
+                title={uploadPopupMinimized ? "Expand" : "Minimize"}
+              >
+                {uploadPopupMinimized ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadPopupOpen(false)}
+                className="p-1 rounded-md theme-text-muted hover:theme-text-main hover:theme-bg-hover transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Body items (when not minimized) */}
+          {!uploadPopupMinimized && (
+            <div className="max-h-60 overflow-y-auto divide-y theme-border-subtle p-2">
+              {uploadQueue.map((item) => (
+                <div key={item.id} className="py-2.5 px-3 flex items-center justify-between gap-3 hover:theme-bg-hover rounded-xl transition-colors">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 shrink-0 text-blue-500" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium theme-text-main truncate max-w-[180px] md:max-w-[220px]">
+                        {item.name}
+                      </p>
+                      <p className="text-[10px] theme-text-muted">
+                        {formatBytes(item.size)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {item.status === "uploading" ? (
+                      <div className="w-5 h-5 border-2 border-[var(--app-primary)] border-t-transparent rounded-full animate-spin" />
+                    ) : item.status === "completed" ? (
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </div>
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

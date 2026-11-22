@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff, ShieldCheck, RotateCcw } from "lucide-react";
 import { loginUser, registerUser, setAuthToken, type UserProfile } from "../services/springApi";
 import { useTheme } from "../hooks/useTheme";
 import { DriveLogo } from "./DriveLogo";
@@ -22,9 +22,36 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Anti-bot & Human Verification CAPTCHA
+  const [captchaNum1, setCaptchaNum1] = useState(() => Math.floor(Math.random() * 7) + 3);
+  const [captchaNum2, setCaptchaNum2] = useState(() => Math.floor(Math.random() * 7) + 2);
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [honeypot, setHoneypot] = useState("");
+
+  const refreshCaptcha = () => {
+    setCaptchaNum1(Math.floor(Math.random() * 7) + 3);
+    setCaptchaNum2(Math.floor(Math.random() * 7) + 2);
+    setCaptchaInput("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Bot detection check
+    if (honeypot) {
+      setError("Automated bot inspection blocked.");
+      return;
+    }
+
+    // Human verification verification
+    const expectedAnswer = captchaNum1 + captchaNum2;
+    if (!captchaInput.trim() || parseInt(captchaInput.trim(), 10) !== expectedAnswer) {
+      setError("Security check failed: Please solve the human verification sum.");
+      refreshCaptcha();
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -214,6 +241,52 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+          </div>
+
+          {/* Honeypot anti-bot trap */}
+          <input
+            type="text"
+            name="security_trap"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            className="hidden absolute -left-[9999px] opacity-0 pointer-events-none"
+            aria-hidden="true"
+          />
+
+          {/* Anti-Bot Human Verification Check */}
+          <div className="theme-bg-subtle/80 border theme-border rounded-2xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between text-xs font-medium theme-text-sub">
+              <span className="flex items-center gap-1.5 text-xs font-semibold theme-text-main">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Human Verification
+              </span>
+              <button
+                type="button"
+                onClick={refreshCaptcha}
+                className="theme-text-muted hover:theme-text-main p-1 rounded-md transition-colors cursor-pointer"
+                title="Generate new puzzle"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="px-3 py-1.5 theme-bg-surface border theme-border rounded-xl font-mono font-bold text-sm theme-text-main tracking-wider shadow-xs select-none">
+                {captchaNum1} + {captchaNum2} = ?
+              </div>
+              <input
+                type="number"
+                required
+                placeholder="Sum"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                className="flex-1 theme-bg-surface border theme-border rounded-xl px-3 py-1.5 text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none focus:border-[var(--app-border-focus)] transition-colors"
+              />
+            </div>
+            <p className="text-[10px] theme-text-muted flex items-center gap-1">
+              <span>🛡️ Blocks automated bots & AI inspection</span>
+            </p>
           </div>
 
           <button

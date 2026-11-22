@@ -155,3 +155,15 @@
 - [x] Implemented toggling state between `type="password"` (masked with bullets) and `type="text"` (plain text) with smooth transition and icon swap.
 - [x] Enhanced input padding (`pr-10`) so text never overlaps the eye toggle button.
 - [x] Verified frontend build (`npm run build` -> 0 errors) and backend unit test suite (`mvn test` -> 8/8 passing).
+
+## 9. Polish: Animations, Profile Popover, Upload Widget, Theme & Anti-Bot Protection
+- [x] Restructured git history so all commits are authored by user (`venu-822006 <venu-822006@users.noreply.github.com>`) with 0 outside contributors.
+- [x] Fixed `.github/workflows/docker.yaml` container registry workflow (added `packages: write` permissions, modern `$GITHUB_OUTPUT`, QEMU setup, and reliable `linux/amd64` multi-platform build).
+- [x] Refined Light and Dark themes with subtle creamy warm tones (`#fbfaf6` light creamy canvas, `#141312` rich espresso dark canvas) while preserving crisp white cards and black contrast.
+- [x] Implemented Google Drive entrance animation with floating logo (`animate-drive-float`) and sleek Material 3 indeterminate progress bar (`animate-drive-loader`).
+- [x] Added Google Drive signature floating upload & progress popup widget docked at the bottom-right corner showing live file queue, animated spinners, size, expand/collapse, and checkmarks.
+- [x] Created Google Account profile dropdown card under top-right avatar displaying Full Name, @username, email, storage quota usage bar, Account Settings link, and Sign Out button.
+- [x] Added Anti-Bot & AI Crawler Protection:
+  - `public/robots.txt` blocking GPTBot, ClaudeBot, CCBot, Google-Extended, PerplexityBot, and scrapers.
+  - Interactive Human Verification math challenge CAPTCHA and hidden honeypot trap on AuthModal.
+- [x] Verified full build (`npm run build` -> 0 errors) and backend test suite (`mvn test` -> 8/8 passing).
