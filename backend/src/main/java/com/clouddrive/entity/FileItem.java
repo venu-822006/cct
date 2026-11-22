@@ -50,7 +50,7 @@ public class FileItem {
     private String color; // e.g., "#3b82f6", "#ef4444"
 
     @Column(length = 255)
-    private String tags; // e.g. "Work,College"
+    private String tags; // e.g. "Work,Personal"
 
     @Column(nullable = false, columnDefinition = "integer default 1")
     private int versionCount = 1;

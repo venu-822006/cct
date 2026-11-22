@@ -51,5 +51,3 @@ Double-click `start-drive.bat` or run in PowerShell:
 
 ## License
 MIT License.
-
-# cct

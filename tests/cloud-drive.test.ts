@@ -4,10 +4,10 @@ import { join } from "path";
 import { createHmac } from "crypto";
 import { LocalStorageAdapter } from "../server/storage/adapters";
 
-describe("Personal Cloud Drive - Academic Test Suite", () => {
+describe("Personal Cloud Drive - Test Suite", () => {
   let testDriveDir: string;
   let adapter: LocalStorageAdapter;
-  const SECRET = "test-college-project-secret";
+  const SECRET = "test-jwt-session-secret-key";
 
   beforeEach(async () => {
     testDriveDir = join(process.cwd(), `tmp-drive-test-${Date.now()}`);
@@ -23,20 +23,20 @@ describe("Personal Cloud Drive - Academic Test Suite", () => {
 
   describe("Module 1: File Storage Lifecycle", () => {
     it("should allow uploading/writing files to personal drive", async () => {
-      const fileName = "/Lecture1_CloudComputing.txt";
-      const fileData = Buffer.from("Welcome to CS401 Cloud Storage Lecture notes.");
+      const fileName = "/Notes.txt";
+      const fileData = Buffer.from("Welcome to Personal Cloud Drive notes.");
       await adapter.write(fileName, fileData);
 
       const exists = await adapter.exists(fileName);
       expect(exists).toBe(true);
 
       const readBack = await adapter.read(fileName);
-      expect(readBack.toString()).toBe("Welcome to CS401 Cloud Storage Lecture notes.");
+      expect(readBack.toString()).toBe("Welcome to Personal Cloud Drive notes.");
     });
 
-    it("should create directory hierarchies for academic folder organization", async () => {
-      await adapter.mkdir("/Semester8/MajorProject/Docs");
-      const exists = await adapter.exists("/Semester8/MajorProject/Docs");
+    it("should create directory hierarchies for folder organization", async () => {
+      await adapter.mkdir("/Work/Projects/Docs");
+      const exists = await adapter.exists("/Work/Projects/Docs");
       expect(exists).toBe(true);
     });
 
@@ -84,7 +84,7 @@ describe("Personal Cloud Drive - Academic Test Suite", () => {
 
   describe("Module 3: Cryptographic Session Authentication", () => {
     it("should generate and verify HMAC-SHA256 session signatures", () => {
-      const payload = JSON.stringify({ user: "student", exp: Date.now() + 3600000, role: "read-write" });
+      const payload = JSON.stringify({ user: "alice", exp: Date.now() + 3600000, role: "read-write" });
       const encodedPayload = Buffer.from(payload).toString("base64url");
       const signature = createHmac("sha256", SECRET).update(encodedPayload).digest("base64url");
       const token = `${encodedPayload}.${signature}`;
@@ -95,18 +95,18 @@ describe("Personal Cloud Drive - Academic Test Suite", () => {
 
       expect(receivedSig).toBe(expectedSig);
       const decoded = JSON.parse(Buffer.from(receivedPayload, "base64url").toString("utf-8"));
-      expect(decoded.user).toBe("student");
+      expect(decoded.user).toBe("alice");
       expect(decoded.role).toBe("read-write");
     });
 
     it("should reject tampered session tokens", () => {
-      const payload = JSON.stringify({ user: "student", exp: Date.now() + 3600000, role: "read-write" });
+      const payload = JSON.stringify({ user: "alice", exp: Date.now() + 3600000, role: "read-write" });
       const encodedPayload = Buffer.from(payload).toString("base64url");
       const signature = createHmac("sha256", SECRET).update(encodedPayload).digest("base64url");
 
       // Attacker attempts privilege escalation to admin
       const forgedPayload = Buffer.from(
-        JSON.stringify({ user: "student", exp: Date.now() + 3600000, role: "admin" })
+        JSON.stringify({ user: "alice", exp: Date.now() + 3600000, role: "admin" })
       ).toString("base64url");
 
       const recalculatedSig = createHmac("sha256", SECRET).update(forgedPayload).digest("base64url");

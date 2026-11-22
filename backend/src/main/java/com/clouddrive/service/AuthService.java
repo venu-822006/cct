@@ -3,9 +3,7 @@ package com.clouddrive.service;
 import com.clouddrive.dto.AuthResponse;
 import com.clouddrive.dto.LoginRequest;
 import com.clouddrive.dto.RegisterRequest;
-import com.clouddrive.entity.FileItem;
 import com.clouddrive.entity.User;
-import com.clouddrive.repository.FileItemRepository;
 import com.clouddrive.repository.UserRepository;
 import com.clouddrive.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,7 +25,6 @@ import java.time.LocalDateTime;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final FileItemRepository fileItemRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
@@ -40,13 +37,11 @@ public class AuthService {
     private long defaultQuotaBytes;
 
     public AuthService(UserRepository userRepository,
-                       FileItemRepository fileItemRepository,
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider tokenProvider,
                        AuthenticationManager authenticationManager,
                        ActivityService activityService) {
         this.userRepository = userRepository;
-        this.fileItemRepository = fileItemRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.authenticationManager = authenticationManager;
@@ -92,37 +87,6 @@ public class AuthService {
         try {
             Path userPath = Paths.get(baseDir, "users", savedUser.getUsername());
             Files.createDirectories(userPath);
-
-            // Create a Welcome guide file for the newly registered user
-            Path welcomePath = userPath.resolve("Welcome_To_CloudDrive.txt");
-            String welcomeContent = "Welcome to your Personal Cloud Drive, " + savedUser.getFullName() + "!\n\n"
-                    + "Features available in your drive:\n"
-                    + "- Upload, download, move, copy, and rename files\n"
-                    + "- Create sub-folders and organize your projects\n"
-                    + "- Preview images, edit code and markdown directly in the browser\n"
-                    + "- Star your favorite files and restore items from Trash\n"
-                    + "- Generate shareable links to share files with anyone\n"
-                    + "- Your allocated storage quota: " + (defaultQuotaBytes / (1024 * 1024)) + " MB\n";
-            Files.writeString(welcomePath, welcomeContent);
-
-            long size = Files.size(welcomePath);
-            FileItem welcomeItem = new FileItem();
-            welcomeItem.setName("Welcome_To_CloudDrive.txt");
-            welcomeItem.setPath("/");
-            welcomeItem.setDirectory(false);
-            welcomeItem.setSize(size);
-            welcomeItem.setContentType("text/plain");
-            welcomeItem.setExtension("txt");
-            welcomeItem.setStarred(true);
-            welcomeItem.setDiskPath(welcomePath.toString());
-            welcomeItem.setOwner(savedUser);
-            welcomeItem.setCreatedAt(LocalDateTime.now());
-            welcomeItem.setUpdatedAt(LocalDateTime.now());
-            fileItemRepository.save(welcomeItem);
-
-            savedUser.setUsedBytes(size);
-            userRepository.save(savedUser);
-
         } catch (IOException e) {
             // Ignore directory creation failure in mock test environments
         }

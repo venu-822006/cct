@@ -1,4 +1,4 @@
-# College Project Task Tracker: Personal Cloud Drive (Spring Boot + React)
+# Project Task Tracker: Personal Cloud Drive (Spring Boot + React)
 
 ## 1. Backend Architecture (Spring Boot 3 + Java 21)
 - [x] Configure Spring Boot 3.3.5 Maven project with Web, Security, Data JPA, Validation, H2, and JJWT.
@@ -68,13 +68,11 @@
 - [x] Recycle Bin / Trash with individual Restore and Empty Trash actions.
 - [x] Verify Vite production build (`bun run build`) -> compiles in <9s with 0 errors.
 
-## 3. Launchers & Academic Documentation
+## 3. Launchers & Cloud Documentation
 - [x] Create one-click Windows launcher (`start-drive.bat` and `start-drive.ps1`) with smart runtime fallback (Bun/npm).
 - [x] Background service daemons active on port 8080 (Spring Boot) and port 5173 (React Vite).
-- [x] Author comprehensive 10-chapter College Capstone Project Report (`docs/COLLEGE_PROJECT_REPORT.md`).
-- [x] Author Technical Viva Voce & Defense Guide with 17 in-depth questions & answers (`docs/VIVA_QUESTIONS_AND_ANSWERS.md`).
-- [x] Author 12-slide Presentation / Seminar Outline (`docs/PRESENTATION_SLIDES_OUTLINE.md`).
 - [x] Verified full live end-to-end execution on local system.
+- [x] Cleaned all legacy brand names, sponsor mentions, unwanted mention words, and demo writeups.
 - [x] Cleaned all legacy brand names, sponsor mentions, and unwanted mention words across HTML, package.json, constants, components, README, and launchers.
 - [x] Redesigned and updated frontend color theme with modern palette system (Deep Indigo & Cyber Violet default, plus Emerald Aurora, Oceanic Azure, Sunset Rose, and Nordic Light), dynamic interactive theme switcher in Header and Account Settings, theme persistence via localStorage, and full theme styling across all components, modals, and AuthModal.
 - [x] Implemented Google Cloud Zero-Billing deployment:
@@ -112,3 +110,13 @@
   - Live visual verification via browser subagent at 1280x800 desktop viewport.
   - Frontend production build (`npm run build`) succeeded with 0 errors.
   - Backend integration tests (7/7) passed with 100% success rate.
+
+## 5. Clean Slate: Demo Data & Unwanted Writeup Removal
+- [x] Removed unwanted academic writeups and reports (`COLLEGE_PROJECT_REPORT.md`, `PRESENTATION_SLIDES_OUTLINE.md`, `VIVA_QUESTIONS_AND_ANSWERS.md`, `s3-integration-tasks.md`, `2025-01-24-s3-integration.md`).
+- [x] Renamed and updated task tracking to `project-tasks.md`.
+- [x] Removed automatic generation of `Welcome_To_CloudDrive.txt` and its demo writeup text in `AuthService.java` so newly registered users start with a clean, empty drive.
+- [x] Cleaned demo tags in `FileItem.java` and updated test parameters in `CloudDriveApplicationTests.java`.
+- [x] Cleaned `.env` environment configuration and `README.md`.
+- [x] Purged demo directories and files from physical storage (`storage_root/` and legacy `storage_drive/`).
+- [x] Cleared demo data from database so all user drives start in a clean zero state.
+- [x] Tested and verified via backend test suite (`mvn test`) and frontend build (`npm run build`).

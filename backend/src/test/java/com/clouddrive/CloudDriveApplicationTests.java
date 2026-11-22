@@ -44,9 +44,9 @@ class CloudDriveApplicationTests {
         String u = "user_" + uid();
         RegisterRequest req = new RegisterRequest();
         req.setUsername(u);
-        req.setEmail(u + "@college.edu");
+        req.setEmail(u + "@example.com");
         req.setPassword("securePass123");
-        req.setFullName("Test Student");
+        req.setFullName("Test User");
 
         AuthResponse res = authService.register(req);
 
@@ -84,14 +84,14 @@ class CloudDriveApplicationTests {
         authService.register(req);
 
         User user = authService.getUserByUsername(u);
-        FileItemDTO folder = fileStorageService.createFolder(user, "/", "SemesterProjects");
+        FileItemDTO folder = fileStorageService.createFolder(user, "/", "Projects");
 
         assertNotNull(folder);
         assertTrue(folder.isDirectory());
-        assertEquals("SemesterProjects", folder.getName());
+        assertEquals("Projects", folder.getName());
 
         List<FileItemDTO> files = fileStorageService.listFiles(user, "/");
-        assertTrue(files.stream().anyMatch(f -> f.getName().equals("SemesterProjects")));
+        assertTrue(files.stream().anyMatch(f -> f.getName().equals("Projects")));
     }
 
     @Test
@@ -106,7 +106,7 @@ class CloudDriveApplicationTests {
         User user = authService.getUserByUsername(u);
         MockMultipartFile file = new MockMultipartFile(
                 "files",
-                "Assignment1.pdf",
+                "Document1.pdf",
                 "application/pdf",
                 "Sample PDF content".getBytes()
         );
@@ -114,7 +114,7 @@ class CloudDriveApplicationTests {
         List<FileItemDTO> uploaded = fileStorageService.uploadFiles(user, "/", new MockMultipartFile[]{file});
         assertEquals(1, uploaded.size());
         FileItemDTO item = uploaded.get(0);
-        assertEquals("Assignment1.pdf", item.getName());
+        assertEquals("Document1.pdf", item.getName());
 
         // Test Move to Trash
         fileStorageService.moveToTrash(user, item.getId());
