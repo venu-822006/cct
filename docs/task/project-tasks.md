@@ -172,3 +172,9 @@
 - [x] Fixed `requestJson` in `springApi.ts` to read `response.text()` before parsing JSON.
 - [x] Eliminated `Failed to execute 'json' on 'Response': Unexpected end of JSON input` error by safely handling empty response bodies, HTTP 204 No Content, and non-JSON server error text.
 - [x] Verified with production build (`npm run build` -> 0 errors) and backend unit test suite (`mvn test` -> 8/8 passing).
+
+## 11. Codebase Cleanup & Runtime Fixes
+- [x] Fixed `Cannot read properties of undefined (reading 'charAt')` in `App.tsx` header avatar fallback, restoring full page load.
+- [x] Removed human verification CAPTCHA and honeypot from `AuthModal.tsx` for clean, instant sign-in and registration.
+- [x] Purged 21 unused legacy prototype files across `src/components/`, `src/hooks/`, `src/services/`, and `tests/storage/`.
+- [x] Verified full test suite (`bun test` -> 9/9 passing, `mvn test` -> 8/8 passing) and build (`npm run build` -> 0 errors).

@@ -1001,10 +1001,10 @@ export function App() {
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-9 h-9 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white flex items-center justify-center font-medium text-sm shadow-xs hover:ring-2 hover:ring-[var(--app-primary-soft)] transition-all cursor-pointer select-none"
-              title={`${user.fullName || user.username} (@${user.username})`}
+              title={`${user?.fullName || user?.username || "User"} (@${user?.username || "user"})`}
               aria-label="Account options"
             >
-              {(user.fullName || user.username).charAt(0).toUpperCase()}
+              {((user?.fullName || user?.username || "U").charAt(0) || "U").toUpperCase()}
             </button>
 
             {profileMenuOpen && (
@@ -1012,15 +1012,15 @@ export function App() {
                 {/* Account Header */}
                 <div className="flex flex-col items-center text-center pb-4 border-b theme-border-subtle">
                   <div className="w-16 h-16 rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-2xl font-semibold mb-3 shadow-md ring-4 ring-blue-500/10 select-none">
-                    {(user.fullName || user.username).charAt(0).toUpperCase()}
+                    {((user?.fullName || user?.username || "U").charAt(0) || "U").toUpperCase()}
                   </div>
                   <h4 className="text-base font-semibold theme-text-main leading-snug">
-                    {user.fullName || user.username}
+                    {user?.fullName || user?.username || "User"}
                   </h4>
                   <p className="text-xs theme-text-muted mt-0.5 font-mono">
-                    @{user.username}
+                    @{user?.username || "user"}
                   </p>
-                  {user.email && (
+                  {user?.email && (
                     <p className="text-xs theme-text-sub mt-1">
                       {user.email}
                     </p>
