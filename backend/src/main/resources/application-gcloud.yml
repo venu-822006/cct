@@ -6,21 +6,20 @@ server:
 
 spring:
   application:
-    name: cloud-drive
+    name: personal-cloud-drive
 
-  # ── Cloud SQL (PostgreSQL via Unix socket on Cloud Run) ──────────────
+  # ── Datasource: Persistent H2 by default (zero-billing), or Cloud SQL when configured
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:clouddrivedb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/clouddrivedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE}
     driverClassName: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
   jpa:
-    database-platform: ${JPA_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
       ddl-auto: update
     show-sql: false
 
-  # Disable H2 console in production
+  # H2 console
   h2:
     console:
       enabled: false
@@ -32,11 +31,10 @@ spring:
 
 app:
   storage:
-    # Set to "gcs" to use Google Cloud Storage, otherwise local
     type: ${STORAGE_TYPE:local}
-    base-dir: ${APP_STORAGE_BASE_DIR:/tmp/storage_root}
+    base-dir: ${APP_STORAGE_BASE_DIR:./storage_root}
     gcs-bucket: ${GCS_BUCKET:}
-    default-quota-bytes: 5368709120 # 5 GB per user on cloud
+    default-quota-bytes: ${APP_STORAGE_QUOTA:5368709120} # 5 GB per user
 
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
@@ -45,4 +43,4 @@ app:
 logging:
   level:
     com.clouddrive: INFO
-    org.springframework.web: WARN
+    org.springframework.web: INFO

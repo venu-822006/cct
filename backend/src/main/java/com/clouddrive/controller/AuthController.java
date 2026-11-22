@@ -48,17 +48,21 @@ public class AuthController {
         if (userDetails == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
         }
-        User user = authService.getUserByUsername(userDetails.getUsername());
-        return ResponseEntity.ok(new AuthResponse(
-                null,
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFullName(),
-                user.getRole(),
-                user.getQuotaBytes(),
-                user.getUsedBytes()
-        ));
+        try {
+            User user = authService.getUserByUsername(userDetails.getUsername());
+            return ResponseEntity.ok(new AuthResponse(
+                    null,
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getFullName(),
+                    user.getRole(),
+                    user.getQuotaBytes(),
+                    user.getUsedBytes()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Session expired or user not found"));
+        }
     }
 
     @PutMapping("/profile")

@@ -30,7 +30,7 @@ export async function request(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403 || (endpoint === "/api/auth/me" && !response.ok)) {
     if (!endpoint.includes("/api/auth/login") && !endpoint.includes("/api/auth/register")) {
       clearAuthToken();
     }

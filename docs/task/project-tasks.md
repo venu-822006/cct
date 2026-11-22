@@ -94,7 +94,8 @@
 - [x] Pushed all changes (UI + Cloud config) to GitHub `https://github.com/venu-822006/cct.git` branch `main`.
 - [x] Completely removed all remaining Google Drive trademark logos, Google 4-color Plus icon, and Google Apps waffle menu; replaced with custom Cloud Drive emblem and clean modern iconography.
 - [x] Streamlined themes to Light and Dark only (`gdrive-light` and `gdrive-dark`), removed unused multi-color themes, and added a single smooth toggle switch component (`ThemeToggle`) across Header, AuthModal, and Settings modal.
-- [x] Verified full test suite (`bun test` -> 24/24 pass) and production build (`bun run build` -> 0 errors).
+- [x] Fixed 500 error on Cloud Shell: updated `application-gcloud.yml` to use persistent file-based H2 database (`./data/clouddrivedb`) with `DB_CLOSE_DELAY=-1` to prevent in-memory table dropping, added comprehensive error logging in `GlobalExceptionHandler`, and handled stale/invalid tokens in `AuthController.getCurrentUser` returning 401 instead of 500.
+- [x] Verified full test suite (`bun test` -> 9/9 pass, Spring Boot -> 8/8 pass) and production build (`bun run build` -> 0 errors).
 
 ## 4. Google Drive Theme Conversion
 - [x] Converted UI to authentic Google Drive Material You (Material 3) aesthetic:
