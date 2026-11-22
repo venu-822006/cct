@@ -271,6 +271,15 @@
 - [x] Added friendly permission failure detection in `deploy-gcloud.sh` with actionable troubleshooting steps.
 - [x] Verified full test suite (`bun test` -> 9/9 pass).
 
+## 22. Permanent Background Daemon & Cloud Shell authuser Preservation
+- [x] Fixed CORS preflight redirect in `springApi.ts`: only apply `Content-Type: application/json` when a request body is present (prevents non-simple preflight `OPTIONS` on `GET /api/auth/me`).
+- [x] Added automatic `authuser` query parameter preservation in `springApi.ts`: forwards Cloud Shell Web Preview's `?authuser=0` on every fetch so Google edge proxy never issues unauthenticated 302 redirects.
+- [x] Enhanced `deploy-cloudshell.sh` with `--daemon` / `--background` flag to run Spring Boot in background via `nohup` with PID tracking (`app.pid`) and health check loop.
+- [x] Created turnkey `start.sh` and `stop.sh` scripts for 1-click startup and shutdown.
+- [x] Rebuilt production frontend bundle (`index-Cn3T8aOr.js`) and refreshed Spring Boot static resources.
+- [x] Verified full test suite (`bun test` -> 9/9 pass).
+
+
 
 
 

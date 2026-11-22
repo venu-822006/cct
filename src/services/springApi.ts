@@ -26,13 +26,31 @@ export async function request(endpoint: string, options: RequestInit = {}) {
 
   if (isFormData) {
     headers.delete("Content-Type");
-  } else if (!headers.has("Content-Type")) {
+  } else if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  // Preserve Cloud Shell authuser query parameter to prevent proxy authentication redirects
+  let targetUrl = endpoint;
+  if (typeof window !== "undefined" && window.location && window.location.search) {
+    try {
+      const currentParams = new URLSearchParams(window.location.search);
+      const authUser = currentParams.get("authuser");
+      if (authUser) {
+        const parsed = new URL(endpoint, window.location.origin);
+        if (!parsed.searchParams.has("authuser")) {
+          parsed.searchParams.set("authuser", authUser);
+          targetUrl = parsed.pathname + parsed.search;
+        }
+      }
+    } catch {
+      // Fallback to original endpoint if parsing fails
+    }
   }
 
   let response: Response;
   try {
-    response = await fetch(endpoint, {
+    response = await fetch(targetUrl, {
       ...options,
       credentials: "include",
       headers,

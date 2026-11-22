@@ -2,16 +2,18 @@
 # ===================================================================
 # Cloud Drive — Google Cloud Shell Launcher
 # Run this script inside Google Cloud Shell to build and start the app
-# Usage: bash deploy-cloudshell.sh [--project PROJECT_ID]
+# Usage: bash deploy-cloudshell.sh [-d|--daemon] [--project PROJECT_ID]
 # ===================================================================
 
 set -e
 
 # ── Parse args ──────────────────────────────────────────────────────
 PROJECT_ID=""
+BACKGROUND=false
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --project) PROJECT_ID="$2"; shift ;;
+    -d|--daemon|--background) BACKGROUND=true ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
   shift
@@ -78,8 +80,29 @@ if [ -z "$JAR" ]; then
   JAR=$(ls backend/target/*.jar | head -1)
 fi
 echo "  Starting JAR: $JAR"
-exec java \
-  -Dserver.port=8080 \
-  -Dspring.profiles.active=gcloud \
-  -Djava.security.egd=file:/dev/./urandom \
-  -jar "$JAR"
+if [ "$BACKGROUND" = true ]; then
+  nohup java \
+    -Dserver.port=8080 \
+    -Dspring.profiles.active=gcloud \
+    -Djava.security.egd=file:/dev/./urandom \
+    -jar "$JAR" > app.log 2>&1 &
+  APP_PID=$!
+  echo "$APP_PID" > app.pid
+  echo "  ✓ Cloud Drive started in background with PID $APP_PID (Logs: tail -f app.log)"
+  echo "  Waiting for server to listen on port 8080..."
+  for i in {1..30}; do
+    if curl -s -I http://localhost:8080 | grep -q "200\|401\|403\|404"; then
+      echo "  ✓ Server is LIVE and ready on port 8080!"
+      break
+    fi
+    sleep 1
+  done
+  echo ""
+  echo "👉 Click 'Web Preview' -> 'Preview on port 8080' in Cloud Shell toolbar"
+else
+  exec java \
+    -Dserver.port=8080 \
+    -Dspring.profiles.active=gcloud \
+    -Djava.security.egd=file:/dev/./urandom \
+    -jar "$JAR"
+fi
