@@ -338,6 +338,18 @@
 - [x] Removed machine-specific `backend/run.args` from Git tracking and added to `.gitignore`.
 - [x] Expanded backend integration test suite to 12 tests (`CloudDriveApplicationTests.java`): 12/12 passing (BUILD SUCCESS).
 - [x] Rebuilt frontend production bundle with 0 errors (`bun run build`).
+
+## 29. Google Cloud Free Services Deployment & Official Google reCAPTCHA Integration
+- [x] Integrated official Google reCAPTCHA service triggered post-login ("at after the login") in `AuthModal.tsx`.
+- [x] Connected Google reCAPTCHA widget via Google's official library (`https://www.google.com/recaptcha/api.js?render=explicit`).
+- [x] Implemented `RecaptchaService.java` backend verification against Google's verification API (`https://www.google.com/recaptcha/api/siteverify`).
+- [x] Added `/api/auth/verify-recaptcha` verification endpoint in `AuthController.java` with configurable keys via `RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET_KEY`.
+- [x] Documented zero-cost deployment on Google Cloud's free tier services:
+  - Google Cloud Shell (100% free, no billing card required, 5 GB storage, web preview on port 8080).
+  - Google Cloud Run (Free tier: 2M requests/month, 360k GB-sec memory, 180k vCPU-sec).
+  - Google Cloud Storage (5 GB Standard storage free).
+  - Google reCAPTCHA Enterprise (10,000 assessments/month free).
+- [x] Verified test suites: 12/12 backend tests pass (`mvn test`, BUILD SUCCESS) and 9/9 frontend tests pass (`bun test`).
 - [x] Verified frontend tests (`bun test`): 9/9 passing.
 - [x] Merged `production-hardening` branch into `main` and pushed to GitHub `origin/main` (`fb42bce`).
 

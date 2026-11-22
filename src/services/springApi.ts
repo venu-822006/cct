@@ -206,6 +206,13 @@ export async function loginUser(username: string, password: string) {
   });
 }
 
+export async function verifyRecaptcha(recaptchaToken: string) {
+  return requestJson<{ success: boolean; message?: string }>("/api/auth/verify-recaptcha", {
+    method: "POST",
+    body: JSON.stringify({ recaptchaToken }),
+  });
+}
+
 export async function fetchCurrentUser() {
   return requestJson<UserProfile>("/api/auth/me");
 }

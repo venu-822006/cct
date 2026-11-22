@@ -20,10 +20,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final RateLimitingService rateLimitingService;
+    private final com.clouddrive.service.RecaptchaService recaptchaService;
 
-    public AuthController(AuthService authService, RateLimitingService rateLimitingService) {
+    public AuthController(AuthService authService,
+                          RateLimitingService rateLimitingService,
+                          com.clouddrive.service.RecaptchaService recaptchaService) {
         this.authService = authService;
         this.rateLimitingService = rateLimitingService;
+        this.recaptchaService = recaptchaService;
     }
 
     private String getClientIp(HttpServletRequest request) {
@@ -71,6 +75,16 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
+        }
+    }
+
+    @PostMapping("/verify-recaptcha")
+    public ResponseEntity<?> verifyRecaptcha(@RequestBody Map<String, String> body) {
+        String token = body != null ? body.get("recaptchaToken") : null;
+        if (recaptchaService.verifyToken(token)) {
+            return ResponseEntity.ok(Map.of("success", true, "message", "Google reCAPTCHA verified successfully"));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Google reCAPTCHA verification failed. Please try again."));
         }
     }
 

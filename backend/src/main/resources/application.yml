@@ -39,6 +39,10 @@ app:
     secret: ${JWT_SECRET:}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours (1 full day)
   security:
+    recaptcha:
+      enabled: ${RECAPTCHA_ENABLED:true}
+      site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI}
+      secret-key: ${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe}
     rate-limit:
       enabled: true
       login-limit: 10 # max 10 login attempts per minute per IP
