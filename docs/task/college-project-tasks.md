@@ -1,0 +1,89 @@
+# College Project Task Tracker: Personal Cloud Drive (Spring Boot + React)
+
+## 1. Backend Architecture (Spring Boot 3 + Java 21)
+- [x] Configure Spring Boot 3.3.5 Maven project with Web, Security, Data JPA, Validation, H2, and JJWT.
+- [x] Implement database entities: `User`, `FileItem`, `FileVersion`, `ShareLink`, `UserShare`, `ActivityLog`.
+- [x] Implement Spring Data JPA repositories with custom queries, quota summation, and category breakdown.
+- [x] Configure Spring Security with `JwtAuthenticationFilter`, BCrypt password hashing, and stateless session management.
+- [x] Implement `AuthService` with real registration, login, profile update, password change, and isolated user directory creation.
+- [x] Implement `FileStorageService` for:
+  - Folder creation & color coding
+  - Blank document creation (.txt, .md, .js, .html, .json)
+  - Streaming multi-file uploads
+  - Single file download & inline preview resource loading
+  - Folder ZIP streaming (`streamFolderAsZip`)
+  - Batch multi-file ZIP streaming (`streamMultipleFilesAsZip`)
+  - In-browser file content editing with automatic version snapshotting
+  - File version history listing & 1-click version restore
+  - Rename, move, star/unstar, soft delete (trash), restore, empty trash
+  - Storage category breakdown calculation (Documents, Images, Video, Audio, Code, Archives, Other, Trash)
+  - Batch operations (batch trash, batch download)
+- [x] Implement `ShareService` for:
+  - Public shareable links with expiration hours and download hit counter
+  - Internal User-to-User sharing (`UserShare`) with VIEW and EDIT permissions
+  - "Shared with Me" and "Shared by Me" queries
+- [x] Implement `ActivityService` for tracking user action audit logs with timestamps.
+- [x] Implement REST controllers: `AuthController`, `FileController`, `ShareController`, `ActivityController`.
+- [x] Execute backend integration tests (`CloudDriveApplicationTests.java`) -> 7/7 passing (100% pass rate).
+- [x] Live end-to-end API verification of all endpoints via PowerShell test harness (All passed 200 OK).
+
+## 2. Frontend Architecture (React 18 + Vite + Tailwind CSS)
+- [x] Remove demo login and fake hardcoded credentials completely.
+- [x] Create modern `AuthModal` supporting Sign In and Account Registration with validation and instant feedback.
+- [x] Create API client `springApi.ts` connecting seamlessly to Spring Boot REST endpoints with JWT Bearer tokens.
+- [x] Build Google Drive-equivalent explorer UI:
+  - Sidebar navigation: My Drive, Shared with Me, Recent, Starred, Public Links, Storage Analytics, Activity Log, Trash
+  - Storage quota progress widget with live percentage
+  - Breadcrumb navigation and root navigation
+  - Instant live search bar
+  - Category filter pills (All, Documents, Images, Video, Audio, Archives, Code)
+  - Sort dropdown (Name, Date, Size - Asc/Desc)
+  - Grid View and List View switcher
+  - Multi-select checkboxes and batch actions toolbar (Batch ZIP download, Batch Move to Trash)
+- [x] "+ New" context dropdown menu:
+  - Upload Files (multi-file select)
+  - Upload Folder
+  - New Folder modal
+  - New Document modal (.txt, .md, .js, .html, .json)
+- [x] Folder Color Palette picker (8 vibrant colors with immediate backend persistence).
+- [x] In-Browser Code & Text Editor modal with syntax-friendly editor and revision saving.
+- [x] File Version History modal with version timeline and 1-click version rollback.
+- [x] Multimedia Previews:
+  - Image lightbox previewer
+  - HTML5 Video player modal
+  - HTML5 Audio player modal
+  - PDF inline iframe embed preview
+- [x] Sharing System:
+  - Public Share modal (create expiring links, copy to clipboard, choose expiration)
+  - Anonymous Public Download page (`/?share=token`)
+  - User-to-User Share tab in Share Modal (target username + VIEW/EDIT permission)
+  - "Shared with Me" dedicated view
+- [x] Storage Analytics Dashboard:
+  - Visual breakdown by file category (Documents, Images, Video, Audio, Code, Archives, Others, Trash)
+  - Interactive quota percentage bar
+- [x] User Settings modal:
+  - Edit full name and email
+  - Change password with verification
+- [x] Activity Log audit trail table with human-readable action badges and relative time ago.
+- [x] Recycle Bin / Trash with individual Restore and Empty Trash actions.
+- [x] Verify Vite production build (`bun run build`) -> compiles in <9s with 0 errors.
+
+## 3. Launchers & Academic Documentation
+- [x] Create one-click Windows launcher (`start-drive.bat` and `start-drive.ps1`) with smart runtime fallback (Bun/npm).
+- [x] Background service daemons active on port 8080 (Spring Boot) and port 5173 (React Vite).
+- [x] Author comprehensive 10-chapter College Capstone Project Report (`docs/COLLEGE_PROJECT_REPORT.md`).
+- [x] Author Technical Viva Voce & Defense Guide with 17 in-depth questions & answers (`docs/VIVA_QUESTIONS_AND_ANSWERS.md`).
+- [x] Author 12-slide Presentation / Seminar Outline (`docs/PRESENTATION_SLIDES_OUTLINE.md`).
+- [x] Verified full live end-to-end execution on local system.
+- [x] Cleaned all legacy brand names, sponsor mentions, and unwanted mention words across HTML, package.json, constants, components, README, and launchers.
+- [x] Redesigned and updated frontend color theme with modern palette system (Deep Indigo & Cyber Violet default, plus Emerald Aurora, Oceanic Azure, Sunset Rose, and Nordic Light), dynamic interactive theme switcher in Header and Account Settings, theme persistence via localStorage, and full theme styling across all components, modals, and AuthModal.
+- [x] Implemented Google Cloud Zero-Billing deployment:
+  - Created `deploy-cloudshell.sh` for one-click setup in Google Cloud Shell.
+  - Generated Maven wrapper (`mvnw`, `mvnw.cmd`) in `backend/` for cross-platform Linux / Cloud Shell compatibility.
+  - Packaged React frontend static build directly into Spring Boot classpath (`backend/src/main/resources/static/`).
+  - Created multi-stage production `Dockerfile` for single-container deployment.
+  - Authored comprehensive guide `docs/GOOGLE_CLOUD_WITHOUT_BILLING_GUIDE.md` covering Google Cloud Shell, Google Drive API, Cloudflare Tunnels, and free zero-card cloud container platforms.
+- [x] Pushed full project to remote GitHub repository `https://github.com/venu-822006/cct.git` on branch `main`.
+- [x] Both backend (port 8080) and frontend (port 5173) are actively running and verified.
+- [x] Created database schema script (`database.sql`) containing complete DDL/DML for `users` and login system.
+- [x] Added `mysql-connector-j` dependency and `application-mysql.yml` for optional external MySQL / phpMyAdmin database connectivity.

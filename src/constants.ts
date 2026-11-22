@@ -1,0 +1,142 @@
+import type { DateFilter, Theme, ViewMode } from "./types";
+import { parseEnvBoolean } from "./utils/env";
+
+export const API_BASE = "/api";
+export const BRAND_EYEBROW = import.meta.env.VITE_BRAND_EYEBROW ?? "Personal Cloud";
+export const BRAND_TITLE = import.meta.env.VITE_BRAND_TITLE ?? "Cloud Drive";
+export const BRAND_SUBTITLE =
+  import.meta.env.VITE_BRAND_SUBTITLE ?? "Secure Cloud Storage & File Management";
+export const SHORTCUTS_ENABLED = parseEnvBoolean(import.meta.env.VITE_SHORTCUTS_ENABLED, false);
+
+export const DEFAULT_THEME: Theme = "indigo";
+export const THEMES: Theme[] = ["indigo", "emerald", "ocean", "sunset", "nordic"];
+export const THEME_STORAGE_KEY = "clouddrive-theme";
+
+export const THEME_CONFIGS: Record<
+  "indigo" | "emerald" | "ocean" | "sunset" | "nordic",
+  { name: string; icon: string; dotClass: string; desc: string }
+> = {
+  indigo: {
+    name: "Deep Indigo",
+    icon: "🌌",
+    dotClass: "bg-indigo-500",
+    desc: "Cyber Violet & Deep Indigo",
+  },
+  emerald: {
+    name: "Emerald Aurora",
+    icon: "🌲",
+    dotClass: "bg-emerald-500",
+    desc: "Matrix Obsidian & Mint Green",
+  },
+  ocean: {
+    name: "Oceanic Azure",
+    icon: "🌊",
+    dotClass: "bg-sky-500",
+    desc: "Midnight Navy & Cyan Glow",
+  },
+  sunset: {
+    name: "Sunset Rose",
+    icon: "🌅",
+    dotClass: "bg-rose-500",
+    desc: "Velvet Noir & Warm Amber",
+  },
+  nordic: {
+    name: "Nordic Light",
+    icon: "⚪",
+    dotClass: "bg-slate-300",
+    desc: "Crisp Modern Minimalist Light",
+  },
+};
+export const LAST_PATH_STORAGE_KEY = "clouddrive-last-path";
+export const DEFAULT_VIEW_MODE: ViewMode = "list";
+export const VIEW_MODE_STORAGE_KEY = "clouddrive-view";
+
+export const FILE_TYPE_GROUPS = [
+  { key: "image", exts: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"] },
+  { key: "audio", exts: [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"] },
+  { key: "video", exts: [".mp4", ".mov", ".mkv", ".webm", ".avi", ".wmv"] },
+  {
+    key: "document",
+    exts: [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".txt",
+      ".md",
+      ".rtf",
+      ".csv",
+      ".xls",
+      ".xlsx",
+      ".ppt",
+      ".pptx",
+      ".json",
+      ".yaml",
+      ".yml",
+      ".xml",
+    ],
+  },
+  { key: "archive", exts: [".zip", ".tar", ".gz", ".tgz", ".rar", ".7z", ".bz2", ".xz"] },
+] as const;
+
+export const TEXT_PREVIEW_EXTS = new Set([".txt", ".php", ".js", ".html"]);
+export const TEXT_EDIT_EXTS = new Set([
+  ".txt",
+  ".php",
+  ".md",
+  ".markdown",
+  ".html",
+  ".htm",
+  ".css",
+  ".scss",
+  ".less",
+  ".js",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".json",
+  ".yml",
+  ".yaml",
+  ".xml",
+  ".svg",
+]);
+export const PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100];
+export const DEFAULT_PAGE_SIZE = 20;
+
+export const DATE_RANGE_MS: Record<DateFilter, number | null> = {
+  any: null,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000,
+  "90d": 90 * 24 * 60 * 60 * 1000,
+};
+
+export const MB_BYTES = 1024 * 1024;
+export const CONTENT_SEARCH_DEBOUNCE_MS = 300;
+
+// S3 presets for quick configuration
+export const S3_PRESETS = [
+  {
+    id: "aws",
+    name: "Amazon S3",
+    region: "us-east-1",
+    endpoint: "",
+  },
+  {
+    id: "r2",
+    name: "Cloudflare R2",
+    region: "auto",
+    endpoint: "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com",
+  },
+  {
+    id: "b2",
+    name: "Backblaze B2",
+    region: "us-west-004",
+    endpoint: "https://s3.us-west-004.backblazeb2.com",
+  },
+  {
+    id: "minio",
+    name: "MinIO",
+    region: "us-east-1",
+    endpoint: "http://localhost:9000",
+  },
+] as const;

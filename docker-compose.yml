@@ -1,0 +1,18 @@
+services:
+  cloud-drive:
+    build: .
+    ports:
+      - "3033:3033"
+    environment:
+      PORT: 3033
+      FILE_ROOT: /data
+      ADMIN_PASSWORD: change-me
+      SESSION_SECRET: change-me
+      AUDIT_LOG_PATH: /app/logs/audit.log
+    # Optionally load environment variables from .env (Compose-level).
+    # env_file:
+    #   - .env
+    # Override host mount paths via HOST_DATA_PATH / HOST_LOGS_PATH in .env if needed.
+    volumes:
+      - ${HOST_DATA_PATH:-./data}:/data
+      - ${HOST_LOGS_PATH:-./logs}:/app/logs

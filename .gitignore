@@ -1,0 +1,12 @@
+.env
+.env.local
+node_modules/
+dist/
+target/
+backend/target/
+data/
+backend/data/
+storage_root/
+storage_drive/
+apache-maven-3.9.6/
+audit.log
