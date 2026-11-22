@@ -1,12 +1,19 @@
 export function DriveLogo({ className = "w-9 h-9" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 11.5z" fill="#ea4335"/>
-      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+    <svg className={className} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="driveLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+      </defs>
+      <rect width="36" height="36" rx="10" fill="url(#driveLogoGrad)" />
+      <path
+        d="M26 22H11a4 4 0 0 1-.95-7.88 5.5 5.5 0 0 1 10.74-1.92A4 4 0 0 1 26 22z"
+        fill="#ffffff"
+      />
+      <rect x="10" y="24" width="16" height="2.5" rx="1.25" fill="#93c5fd" />
+      <circle cx="23.5" cy="25.25" r="0.75" fill="#1d4ed8" />
     </svg>
   );
 }

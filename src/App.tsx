@@ -107,24 +107,7 @@ import { useTheme } from "./hooks/useTheme";
 import { THEMES, THEME_CONFIGS } from "./constants";
 import { DriveLogo } from "./components/DriveLogo";
 
-export function GooglePlusIcon({ className = "w-7 h-7" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 36 36">
-      <path fill="#4285F4" d="M16 16v14h4V20z"/>
-      <path fill="#34A853" d="M30 16H20v4h10z"/>
-      <path fill="#FBBC05" d="M20 16V6h-4v10z"/>
-      <path fill="#EA4335" d="M6 16h10v4H6z"/>
-    </svg>
-  );
-}
 
-export function GoogleWaffleIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 20c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
-    </svg>
-  );
-}
 
 export function App() {
   const [theme, setTheme] = useTheme();
@@ -671,7 +654,7 @@ export function App() {
           <div className="flex justify-center mb-4">
             <DriveLogo className="w-12 h-12" />
           </div>
-          <h1 className="text-xl font-medium theme-text-main mb-6">Drive</h1>
+          <h1 className="text-xl font-medium theme-text-main mb-6">Cloud Drive</h1>
 
           <div className="theme-bg-input p-4 rounded-2xl border theme-border-subtle text-left mb-6">
             <p className="text-xs theme-text-muted mb-1">File</p>
@@ -758,7 +741,7 @@ export function App() {
           >
             <DriveLogo className="w-9 h-9" />
             <span className="font-medium text-xl tracking-tight theme-text-main font-sans">
-              Drive
+              Cloud Drive
             </span>
           </button>
         </div>
@@ -769,7 +752,7 @@ export function App() {
             <Search className="w-5 h-5 text-[var(--app-text-muted)] shrink-0 mr-3" />
             <input
               type="text"
-              placeholder="Search in Drive"
+              placeholder="Search in Cloud Drive"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent text-sm theme-text-main placeholder-[var(--app-text-muted)] focus:outline-none"
@@ -838,12 +821,7 @@ export function App() {
             <Settings className="w-5 h-5" />
           </button>
 
-          <button
-            title="Google Apps"
-            className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 theme-text-sub hover:theme-text-main transition-colors cursor-pointer hidden sm:block"
-          >
-            <GoogleWaffleIcon className="w-5 h-5" />
-          </button>
+
 
           <div className="flex items-center gap-2 pl-2">
             <div
@@ -877,7 +855,9 @@ export function App() {
                 onClick={() => setNewMenuOpen(!newMenuOpen)}
                 className="gdrive-new-btn h-14 px-6 rounded-2xl flex items-center gap-3 font-medium text-sm transition-all cursor-pointer shadow-md"
               >
-                <GooglePlusIcon className="w-7 h-7" />
+                <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </div>
                 <span className="font-semibold text-sm tracking-wide">New</span>
               </button>
 

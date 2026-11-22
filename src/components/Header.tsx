@@ -3,6 +3,7 @@ import { useState } from "react";
 import { BRAND_EYEBROW, BRAND_SUBTITLE, BRAND_TITLE, THEMES } from "../constants";
 import type { AuthState, DateFilter, Theme, TypeFilter, UserRole } from "../types";
 import { CollapseIcon, ExpandIcon } from "./icons";
+import { DriveLogo } from "./DriveLogo";
 
 type HeaderProps = {
   auth: AuthState;
@@ -67,7 +68,7 @@ export function Header({
               style={{ fontFamily: 'inherit', fontSize: 'inherit', color: 'inherit' }}
               aria-label="Go to home"
             >
-              <img className="brand-logo" src="/logo.png" alt={`${BRAND_TITLE} logo`} />
+              <DriveLogo className="w-8 h-8" />
               <h1>{BRAND_TITLE}</h1>
             </button>
           </div>
