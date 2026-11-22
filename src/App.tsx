@@ -2157,9 +2157,20 @@ export function App() {
           >
             <div className="w-full flex items-center justify-between pb-3 border-b theme-border-subtle mb-3">
               <span className="text-sm font-semibold theme-text-main truncate">{previewMedia.name}</span>
-              <button onClick={() => setPreviewMedia(null)} className="theme-text-muted hover:theme-text-main">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewMedia.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 text-xs rounded-lg theme-border border theme-text-main hover:opacity-80 transition-opacity flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Full</span>
+                </a>
+                <button onClick={() => setPreviewMedia(null)} className="theme-text-muted hover:theme-text-main p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {previewMedia.type === "image" && (

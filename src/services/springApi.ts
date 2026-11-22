@@ -279,11 +279,13 @@ export async function uploadFiles(path: string, files: File[]) {
 }
 
 export function getFileDownloadUrl(id: number) {
-  return `/api/files/download/${id}`;
+  const token = getAuthToken();
+  return `/api/files/download/${id}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }
 
 export function getFolderZipDownloadUrl(id: number) {
-  return `/api/files/download-folder/${id}`;
+  const token = getAuthToken();
+  return `/api/files/download-folder/${id}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }
 
 export async function downloadMultipleAsZip(ids: number[]) {
@@ -302,7 +304,8 @@ export async function downloadMultipleAsZip(ids: number[]) {
 }
 
 export function getFilePreviewUrl(id: number) {
-  return `/api/files/preview/${id}`;
+  const token = getAuthToken();
+  return `/api/files/preview/${id}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }
 
 export async function fetchFileContent(id: number) {

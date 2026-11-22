@@ -298,6 +298,15 @@
 - [x] Tested and verified `GET /api/files/quota`: correctly reports storage usage and quota bounds.
 - [x] Cloud Drive is 100% operational, permanent 24/7, and completely free of Cloud Shell proxy/CORS errors.
 
+## 25. Fix File Preview & Direct Media Viewing Authentication
+- [x] Identified root cause of files not viewing: HTML tags (`<img>`, `<video>`, `<audio>`, `<iframe>`) cannot attach `Authorization: Bearer` headers, causing `401 Unauthorized` responses on `/api/files/preview/{id}`.
+- [x] Updated `JwtAuthenticationFilter.java` to check both `Authorization: Bearer` header and query parameter `request.getParameter("token")`.
+- [x] Updated `getFilePreviewUrl`, `getFileDownloadUrl`, and `getFolderZipDownloadUrl` in `springApi.ts` to append `?token=<jwt_token>`.
+- [x] Added "Open Full" link in `App.tsx` preview modal allowing users to open any file or PDF in full-screen in a new tab.
+- [x] Rebuilt frontend production bundle (`index-UO9PD8Fo.js`) and refreshed Spring Boot static resources.
+- [x] Verified full test suite (`bun test` -> 9/9 pass, `mvn test` -> 9/9 pass, BUILD SUCCESS).
+
+
 
 
 
