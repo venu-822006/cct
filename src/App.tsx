@@ -165,7 +165,14 @@ export function App() {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
   // Preview Modals
-  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: "image" | "audio" | "video" | "pdf"; name: string } | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{
+    url: string;
+    type: "image" | "audio" | "video" | "pdf" | "document";
+    name: string;
+    size?: number;
+    ext?: string;
+    item?: DriveItem;
+  } | null>(null);
 
   // Editor Modal
   const [editorItem, setEditorItem] = useState<{ id: number; name: string; content: string } | null>(null);
@@ -781,17 +788,24 @@ export function App() {
     const ext = item.extension.toLowerCase();
     const url = getFilePreviewUrl(item.id);
     if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) {
-      setPreviewMedia({ url, type: "image", name: item.name });
+      setPreviewMedia({ url, type: "image", name: item.name, size: item.size, ext, item });
     } else if (["mp4", "webm", "mov"].includes(ext)) {
-      setPreviewMedia({ url, type: "video", name: item.name });
+      setPreviewMedia({ url, type: "video", name: item.name, size: item.size, ext, item });
     } else if (["mp3", "wav", "ogg", "flac"].includes(ext)) {
-      setPreviewMedia({ url, type: "audio", name: item.name });
+      setPreviewMedia({ url, type: "audio", name: item.name, size: item.size, ext, item });
     } else if (ext === "pdf") {
-      setPreviewMedia({ url, type: "pdf", name: item.name });
+      setPreviewMedia({ url, type: "pdf", name: item.name, size: item.size, ext, item });
     } else if (["txt", "md", "js", "ts", "html", "css", "py", "java", "json", "xml", "sql", "sh"].includes(ext)) {
       handleOpenEditor(item);
     } else {
-      window.open(getFileDownloadUrl(item.id), "_blank");
+      setPreviewMedia({
+        url: getFileDownloadUrl(item.id),
+        type: "document",
+        name: item.name,
+        size: item.size,
+        ext,
+        item,
+      });
     }
   };
 
@@ -1580,7 +1594,7 @@ export function App() {
                                         className={`p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
                                           activeMenuId === item.id
                                             ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
-                                            : "theme-text-muted hover:theme-text-main opacity-0 group-hover:opacity-100"
+                                            : "theme-text-muted hover:theme-text-main opacity-70 sm:opacity-0 sm:group-hover:opacity-100"
                                         }`}
                                         title="More options"
                                       >
@@ -1671,7 +1685,7 @@ export function App() {
                                       className={`p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
                                         activeMenuId === item.id
                                           ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
-                                          : "theme-text-muted hover:theme-text-main opacity-0 group-hover:opacity-100"
+                                          : "theme-text-muted hover:theme-text-main opacity-70 sm:opacity-0 sm:group-hover:opacity-100"
                                       }`}
                                       title="More options"
                                     >
@@ -2156,8 +2170,16 @@ export function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between pb-3 border-b theme-border-subtle mb-3">
-              <span className="text-sm font-semibold theme-text-main truncate">{previewMedia.name}</span>
-              <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold theme-text-main truncate pr-4">{previewMedia.name}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewMedia.url}
+                  download={previewMedia.name}
+                  className="px-2.5 py-1 text-xs rounded-lg theme-btn-primary flex items-center gap-1 shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
                 <a
                   href={previewMedia.url}
                   target="_blank"
@@ -2200,6 +2222,64 @@ export function App() {
 
             {previewMedia.type === "pdf" && (
               <iframe src={previewMedia.url} className="w-full h-[70vh] rounded-xl border theme-border" />
+            )}
+
+            {previewMedia.type === "document" && (
+              <div className="w-full py-10 px-6 flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 rounded-3xl bg-[#f0f4f9] dark:bg-[#282a2c] flex items-center justify-center mb-6 shadow-inner border theme-border">
+                  {previewMedia.item ? (
+                    <div className="scale-150 transform">{getFileIcon(previewMedia.item)}</div>
+                  ) : (
+                    <FileText className="w-12 h-12 text-[#0b57d0]" />
+                  )}
+                </div>
+                <h3 className="text-base font-semibold theme-text-main max-w-lg truncate mb-1">
+                  {previewMedia.name}
+                </h3>
+                <p className="text-xs theme-text-muted mb-6">
+                  {previewMedia.ext ? `${previewMedia.ext.toUpperCase()} File • ` : ""}
+                  {previewMedia.size ? formatBytes(previewMedia.size) : "Standard File"}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
+                  <a
+                    href={previewMedia.url}
+                    download={previewMedia.name}
+                    className="flex-1 min-w-[140px] px-5 py-2.5 theme-btn-primary text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download File</span>
+                  </a>
+
+                  {previewMedia.item && (
+                    <button
+                      onClick={() => {
+                        const itm = previewMedia.item!;
+                        setPreviewMedia(null);
+                        handleOpenUserShare(itm);
+                      }}
+                      className="px-4 py-2.5 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>Share</span>
+                    </button>
+                  )}
+
+                  {previewMedia.item && (
+                    <button
+                      onClick={() => {
+                        const itm = previewMedia.item!;
+                        setPreviewMedia(null);
+                        handleOpenVersions(itm);
+                      }}
+                      className="px-4 py-2.5 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <History className="w-4 h-4" />
+                      <span>Versions</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

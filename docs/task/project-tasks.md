@@ -316,6 +316,16 @@
 - [x] Removed hardcoded H2 dialect in `application.yml` and `application-gcloud.yml` to let Hibernate 6 auto-detect PostgreSQL dialect.
 - [x] Verified tests pass: `mvn test` 9/9 pass (BUILD SUCCESS), `bun test` 9/9 pass.
 
+## 27. Universal Document Preview Modal & UI Action Discoverability
+- [x] Added dedicated Document Preview card modal for non-streamable files (`.docx`, `.xlsx`, `.pptx`, `.zip`, `.tar`, `.csv`, etc.) in `src/App.tsx`.
+- [x] Replaced `window.open` fallback (which triggered browser popup blockers) with in-app preview card displaying file format badge, name, formatted size, 1-click direct download button, share link action, and version history trigger.
+- [x] Added direct Download button inside the preview modal header bar for all previewable formats.
+- [x] Enhanced discoverability of 3-dots options and star buttons across touchscreens and mobile devices (`opacity-70 sm:opacity-0 sm:group-hover:opacity-100`).
+- [x] Rebuilt frontend production bundle (`index-Qs5vRlZX.js`, `index-BWUYT8dZ.css`) and deployed into Spring Boot static resources.
+- [x] Verified live deployment on `https://cct-3c4n.onrender.com` with real browser subagent: verified login, file upload (`test.txt`), file preview modal, and folder creation (`Test Folder`).
+- [x] Verified all test suites pass: `bun test` (9/9 passed) and `mvn test` (9/9 passed, BUILD SUCCESS).
+
+
 
 
 
