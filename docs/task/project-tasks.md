@@ -252,6 +252,13 @@
 - [x] Rebuilt frontend bundle (`index-CxBbdSeE.js`) and refreshed backend static assets.
 - [x] Verified full test suite (`bun test` -> 9/9 pass, `mvn test` -> 9/9 pass, BUILD SUCCESS).
 
+## 19. Diagnosis of Cloud Shell Web Preview CAPTCHA & Production Cloud Run Path
+- [x] Identified that Google Cloud Shell Web Preview (`8080-cs-*.cloudshell.dev`) is protected by Google's anti-abuse edge proxy which intercepts rapid AJAX/multipart requests and file uploads with a Google reCAPTCHA challenge ("Our systems have detected unusual traffic from your computer network... Select all images with cars").
+- [x] Confirmed that when Google's proxy returns a CAPTCHA challenge HTML or redirect instead of proxying to port 8080, the browser's native `fetch()` fails with `TypeError: Failed to fetch` and marks the file upload as failed.
+- [x] Documented the critical distinction between Cloud Shell (a temporary, 20-minute timeout developer sandbox behind Google bot proxies) and Google Cloud Run (a production serverless container service with dedicated HTTPS endpoints, no Cloud Shell proxies, and no bot CAPTCHA blocks).
+- [x] Verified tests pass: `bun test` (9/9 pass) and `mvn test` (9/9 pass, BUILD SUCCESS).
+
+
 
 
 
