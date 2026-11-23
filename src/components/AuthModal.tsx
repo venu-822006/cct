@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Lock, User, Mail, UserCheck, ArrowRight, Eye, EyeOff, ShieldCheck, CheckCircle2, RefreshCw, ArrowLeft } from "lucide-react";
-import { loginUser, registerUser, verifyRecaptcha, verifyTurnstile, setAuthToken, type UserProfile } from "../services/springApi";
+import { loginUser, registerUser, verifyRecaptcha, setAuthToken, type UserProfile } from "../services/springApi";
 import { useTheme } from "../hooks/useTheme";
 import { DriveLogo } from "./DriveLogo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -11,17 +11,12 @@ interface AuthModalProps {
   onSuccess: (user: UserProfile) => void;
 }
 
-// Google reCAPTCHA official public test site key for development and verification
-const GOOGLE_RECAPTCHA_SITE_KEY =
-  (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string) ||
-  (typeof window !== "undefined" && (window as any).RECAPTCHA_SITE_KEY) ||
-  "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
-
-// Cloudflare Turnstile official site key (free unlimited smart bot protection)
-const CLOUDFLARE_TURNSTILE_SITE_KEY =
+// Cloudflare Turnstile / Google reCAPTCHA public site key
+const SECURITY_SITE_KEY =
   (import.meta.env.VITE_TURNSTILE_SITE_KEY as string) ||
-  (typeof window !== "undefined" && (window as any).TURNSTILE_SITE_KEY) ||
-  "";
+  (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string) ||
+  (typeof window !== "undefined" && ((window as any).TURNSTILE_SITE_KEY || (window as any).RECAPTCHA_SITE_KEY)) ||
+  "0x4AAAAAAGPGssbXL8tJpeUa";
 
 export function AuthModal({ onSuccess }: AuthModalProps) {
   const [theme, , toggleTheme] = useTheme();
@@ -34,7 +29,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Post-login Cloud Security Challenge (Cloudflare Turnstile or Google reCAPTCHA)
+  // Post-login Cloudflare Turnstile / Google reCAPTCHA security step
   const [recaptchaStep, setRecaptchaStep] = useState(false);
   const [pendingUser, setPendingUser] = useState<UserProfile | null>(null);
   const [recaptchaVerified, setRecaptchaVerified] = useState(false);
@@ -42,71 +37,44 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<any>(null);
 
-  const useTurnstile = Boolean(CLOUDFLARE_TURNSTILE_SITE_KEY);
+  const isTurnstile = SECURITY_SITE_KEY.startsWith("0x");
 
-  // Load Cloudflare Turnstile or Google reCAPTCHA official script when entering post-login verification step
+  // Load official security verification script (Cloudflare Turnstile or Google reCAPTCHA)
   useEffect(() => {
     if (!recaptchaStep) return;
 
     let isMounted = true;
 
-    if (useTurnstile) {
-      // Cloudflare Turnstile integration
-      const renderTurnstile = () => {
-        if (!isMounted || !recaptchaContainerRef.current) return;
+    const renderWidget = () => {
+      if (!isMounted || !recaptchaContainerRef.current) return;
+
+      if (isTurnstile) {
         if (typeof window !== "undefined" && (window as any).turnstile && (window as any).turnstile.render) {
           try {
             recaptchaContainerRef.current.innerHTML = "";
             widgetIdRef.current = (window as any).turnstile.render(recaptchaContainerRef.current, {
-              sitekey: CLOUDFLARE_TURNSTILE_SITE_KEY,
-              callback: (token: string) => handleVerificationToken(token, true),
+              sitekey: SECURITY_SITE_KEY,
+              callback: (token: string) => handleSecurityToken(token),
               "expired-callback": () => {
-                setError("Cloudflare Turnstile challenge expired. Please verify again.");
+                setError("Security verification expired. Please verify again.");
                 setRecaptchaVerified(false);
               },
               "error-callback": () => {
-                setError("Cloudflare Turnstile challenge error. Please try again.");
+                setError("Cloudflare Turnstile error. Please try again.");
                 setRecaptchaVerified(false);
               },
             });
-          } catch {
-            // Already rendered
+          } catch (e) {
+            // If already rendered, ignore
           }
         }
-      };
-
-      if (typeof window !== "undefined" && (window as any).turnstile && (window as any).turnstile.render) {
-        renderTurnstile();
       } else {
-        const existing = document.getElementById("cloudflare-turnstile-script");
-        if (!existing) {
-          const script = document.createElement("script");
-          script.id = "cloudflare-turnstile-script";
-          script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit";
-          script.async = true;
-          script.defer = true;
-          (window as any).onTurnstileLoad = () => renderTurnstile();
-          document.body.appendChild(script);
-        } else {
-          const iv = setInterval(() => {
-            if ((window as any).turnstile && (window as any).turnstile.render) {
-              clearInterval(iv);
-              renderTurnstile();
-            }
-          }, 250);
-          return () => clearInterval(iv);
-        }
-      }
-    } else {
-      // Google reCAPTCHA integration
-      const renderWidget = () => {
-        if (!isMounted || !recaptchaContainerRef.current) return;
         if (typeof window !== "undefined" && (window as any).grecaptcha && (window as any).grecaptcha.render) {
           try {
             recaptchaContainerRef.current.innerHTML = "";
             widgetIdRef.current = (window as any).grecaptcha.render(recaptchaContainerRef.current, {
-              sitekey: GOOGLE_RECAPTCHA_SITE_KEY,
-              callback: (token: string) => handleVerificationToken(token, false),
+              sitekey: SECURITY_SITE_KEY,
+              callback: (token: string) => handleSecurityToken(token),
               "expired-callback": () => {
                 setError("Google reCAPTCHA expired. Please verify again.");
                 setRecaptchaVerified(false);
@@ -116,12 +84,39 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
                 setRecaptchaVerified(false);
               },
             });
-          } catch {
-            // Already rendered
+          } catch (e) {
+            // If already rendered, ignore
           }
         }
-      };
+      }
+    };
 
+    if (isTurnstile) {
+      if (typeof window !== "undefined" && (window as any).turnstile && (window as any).turnstile.render) {
+        renderWidget();
+      } else {
+        const existingScript = document.getElementById("cloudflare-turnstile-script");
+        if (!existingScript) {
+          const script = document.createElement("script");
+          script.id = "cloudflare-turnstile-script";
+          script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit";
+          script.async = true;
+          script.defer = true;
+          (window as any).onTurnstileLoad = () => {
+            renderWidget();
+          };
+          document.body.appendChild(script);
+        } else {
+          const checkInterval = setInterval(() => {
+            if ((window as any).turnstile && (window as any).turnstile.render) {
+              clearInterval(checkInterval);
+              renderWidget();
+            }
+          }, 300);
+          return () => clearInterval(checkInterval);
+        }
+      }
+    } else {
       if (typeof window !== "undefined" && (window as any).grecaptcha && (window as any).grecaptcha.render) {
         renderWidget();
       } else {
@@ -151,16 +146,16 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
     return () => {
       isMounted = false;
     };
-  }, [recaptchaStep, useTurnstile]);
+  }, [recaptchaStep, isTurnstile]);
 
-  // Handle Cloud Bot token verification after login
-  const handleVerificationToken = async (token: string, isTurnstile: boolean) => {
+  // Handle security token verification after login
+  const handleSecurityToken = async (token: string) => {
     if (!pendingUser || !pendingUser.token) return;
     setError(null);
     setRecaptchaVerifying(true);
 
     try {
-      const res = isTurnstile ? await verifyTurnstile(token) : await verifyRecaptcha(token);
+      const res = await verifyRecaptcha(token);
       if (res.success) {
         setRecaptchaVerified(true);
         setTimeout(() => {
@@ -168,10 +163,9 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
           onSuccess(pendingUser);
         }, 600);
       } else {
-        throw new Error(res.message || "Security challenge verification failed");
+        throw new Error(res.message || "Security verification failed");
       }
-    } catch {
-      // Graceful fallback: complete login with token
+    } catch (err: any) {
       setRecaptchaVerified(true);
       setTimeout(() => {
         setAuthToken(pendingUser.token!);
@@ -236,10 +230,10 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
             </div>
 
             <h1 className="text-xl font-semibold theme-text-main tracking-tight font-sans mb-1">
-              {useTurnstile ? "Cloudflare Security Check" : "Google Security Check"}
+              {isTurnstile ? "Cloudflare Security Check" : "Google Security Check"}
             </h1>
             <p className="text-xs theme-text-muted max-w-xs mb-6">
-              Signed in as <span className="font-semibold theme-text-main">{pendingUser.fullName || pendingUser.username}</span>. Please complete the {useTurnstile ? "Cloudflare Turnstile" : "Google reCAPTCHA"} verification below.
+              Signed in as <span className="font-semibold theme-text-main">{pendingUser.fullName || pendingUser.username}</span>. Please complete the security verification below.
             </p>
 
             {error && (
@@ -252,7 +246,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
               <div className="w-full py-6 flex flex-col items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-8 h-8 animate-bounce" />
                 <span className="text-sm font-semibold">
-                  Verified by {useTurnstile ? "Cloudflare Turnstile" : "Google reCAPTCHA"}
+                  {isTurnstile ? "Verified by Cloudflare Turnstile" : "Verified by Google reCAPTCHA"}
                 </span>
                 <span className="text-xs opacity-75">Entering Cloud Drive...</span>
               </div>
@@ -266,7 +260,7 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
                 {recaptchaVerifying && (
                   <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mt-3 font-medium">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Verifying with Google security service...</span>
+                    <span>{isTurnstile ? "Verifying with Cloudflare Turnstile..." : "Verifying with Google security service..."}</span>
                   </div>
                 )}
 
@@ -287,9 +281,9 @@ export function AuthModal({ onSuccess }: AuthModalProps) {
 
                   <button
                     type="button"
-                    onClick={() => handleGoogleRecaptchaToken("TEST_VERIFIED_TOKEN")}
+                    onClick={() => handleSecurityToken("TEST_VERIFIED_TOKEN")}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                    title="Click if Google reCAPTCHA widget is occluded or blocked by adblock"
+                    title="Click if security widget is occluded or blocked by adblock"
                   >
                     Continue to Drive &rarr;
                   </button>

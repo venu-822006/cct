@@ -35,12 +35,6 @@ app:
     gcs-bucket: ${GCS_BUCKET:}
     default-quota-bytes: ${APP_STORAGE_QUOTA:5368709120} # 5 GB per user
 
-  admin:
-    bootstrap-enabled: ${ADMIN_BOOTSTRAP_ENABLED:true}
-    username: ${ADMIN_BOOTSTRAP_USERNAME:admin}
-    password: ${ADMIN_BOOTSTRAP_PASSWORD:admin123}
-    email: ${ADMIN_BOOTSTRAP_EMAIL:admin@localhost}
-
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970337336763979244226452948404D6351655468576D5A7134743777217A25432A}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours (1 full day)
@@ -48,28 +42,13 @@ app:
   security:
     recaptcha:
       enabled: ${RECAPTCHA_ENABLED:true}
-      site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI}
-      secret-key: ${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe}
-    turnstile:
-      enabled: ${TURNSTILE_ENABLED:false}
-      site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
-      secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
+      site-key: ${RECAPTCHA_SITE_KEY:0x4AAAAAAGPGssbXL8tJpeUa}
+      secret-key: ${RECAPTCHA_SECRET_KEY:0x4AAAAAAGPGsoZ9R0IzIhtmpYKaF5OiuAY}
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:true}
       login-limit: ${RATE_LIMIT_LOGIN:10} # max 10 login attempts per minute per IP
       register-limit: ${RATE_LIMIT_REGISTER:5} # max 5 registration attempts per minute per IP
       window-seconds: 60
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: when-authorized
-      probes:
-        enabled: true
 
 logging:
   level:

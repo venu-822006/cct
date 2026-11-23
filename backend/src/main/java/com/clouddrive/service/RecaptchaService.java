@@ -17,7 +17,10 @@ public class RecaptchaService {
 
     private static final Logger log = LoggerFactory.getLogger(RecaptchaService.class);
     private static final String GOOGLE_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
-    // Official Google reCAPTCHA test secret key for development & verification
+    private static final String CLOUDFLARE_TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+
+    // Official Cloudflare Turnstile secret key (and Google reCAPTCHA test secret fallback)
+    private static final String DEFAULT_TURNSTILE_SECRET = "0x4AAAAAAGPGsoZ9R0IzIhtmpYKaF5OiuAY";
     private static final String DEFAULT_TEST_SECRET = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe";
 
     @Value("${app.security.recaptcha.secret-key:${RECAPTCHA_SECRET_KEY:}}")
@@ -40,21 +43,24 @@ public class RecaptchaService {
             return false;
         }
 
-        String effectiveSecret = StringUtils.hasText(secretKey) ? secretKey.trim() : DEFAULT_TEST_SECRET;
+        String effectiveSecret = StringUtils.hasText(secretKey) ? secretKey.trim() : DEFAULT_TURNSTILE_SECRET;
+        boolean isTurnstile = effectiveSecret.startsWith("0x");
+        String verifyUrl = isTurnstile ? CLOUDFLARE_TURNSTILE_VERIFY_URL : GOOGLE_VERIFY_URL;
 
         try {
             MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
             params.add("secret", effectiveSecret);
             params.add("response", responseToken.trim());
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(GOOGLE_VERIFY_URL, params, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(verifyUrl, params, Map.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Boolean success = (Boolean) response.getBody().get("success");
-                log.info("Google reCAPTCHA verification result: {}", success);
+                log.info("{} verification result: {}", isTurnstile ? "Cloudflare Turnstile" : "Google reCAPTCHA", success);
                 return Boolean.TRUE.equals(success);
             }
         } catch (Exception e) {
-            log.warn("Google reCAPTCHA API verification error: {}. Allowing graceful fallback for isolated testing.", e.getMessage());
+            log.warn("{} API verification error: {}. Allowing graceful fallback for isolated testing.",
+                    isTurnstile ? "Cloudflare Turnstile" : "Google reCAPTCHA", e.getMessage());
             return true;
         }
         return false;
