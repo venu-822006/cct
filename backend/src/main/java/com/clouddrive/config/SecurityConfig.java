@@ -80,7 +80,8 @@ public class SecurityConfig {
                             .requestMatchers("/", "/index.html", "/assets/**", "/favicon.png", "/logo.png", "/*.js", "/*.css", "/manifest.json").permitAll()
                             .requestMatchers("/api/auth/**").permitAll()
                             .requestMatchers("/api/share/info/**", "/api/share/download/**", "/api/share/download-folder/**").permitAll()
-                            .requestMatchers("/error").permitAll();
+                            .requestMatchers("/error").permitAll()
+                            .requestMatchers("/actuator/health", "/actuator/info").permitAll();
 
                     if (h2ConsoleEnabled) {
                         auth.requestMatchers("/h2-console/**").permitAll();

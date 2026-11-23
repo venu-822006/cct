@@ -371,6 +371,23 @@
   - Enhanced error handling in `springApi.ts` with actionable troubleshooting if Google Cloud Shell proxy terminates session.
 - [x] Verified full build and test suites: `bun test` 9/9 passing, `mvnw.cmd test` 12/12 passing (BUILD SUCCESS).
 
+## 32. Google Cloud & Cloudflare Free Cloud Services Integration
+- [x] Implemented production-grade integration with Google Cloud and Cloudflare Always Free tier cloud services, eliminating reliance on ephemeral manual sessions or manual terminal maintenance:
+  - **Cloudflare Pages Edge CDN**: Deployed frontend static assets via `wrangler.toml`, `public/_headers` (edge security policies and immutable caching), and `public/_routes.json`.
+  - **Cloudflare Pages Functions Edge Proxy**: Implemented serverless edge reverse proxy in `functions/api/[[path]].ts` handling streaming `duplex: "half"` file uploads and downloads, eliminating CORS and proxy authentication issues.
+  - **Cloudflare Turnstile Bot Protection**: Implemented `TurnstileService.java` querying Cloudflare's siteverify API, added `@PostMapping("/verify-turnstile")` endpoint, and added dynamic Turnstile challenge support in `AuthModal.tsx`.
+  - **Google Cloud Run Serverless Service**: Created `gcloud-run.yaml` Knative specification configured for 0 minimum instances (scale-to-zero when idle for $0 cost), 512Mi RAM, 1 vCPU, and GCS volume mounting.
+  - **Google Cloud Build CI/CD**: Created `cloudbuild.yaml` utilizing Google Cloud Build's 120 free build-minutes/day for automated Docker container compilation and deployment.
+  - **Automated GitHub Actions CI/CD**:
+    - `.github/workflows/deploy-cloudflare-pages.yaml` for automatic edge deployment to Cloudflare Pages.
+    - `.github/workflows/deploy-gcloud-run.yaml` for automatic container deployment to Google Cloud Run.
+  - **Spring Boot Actuator Health Monitoring**: Added `spring-boot-starter-actuator` in `pom.xml`, permitted `/actuator/health` and `/actuator/info` in `SecurityConfig.java`, and configured container readiness/liveness probes in `application.yml` and `application-gcloud.yml`.
+  - **Cloudflare Zero Trust Tunnel Daemon**: Created `cloudflared/docker-compose.tunnel.yml` and `cloudflared/config.example.yml` for automated persistent connectivity without opening firewall ports.
+  - **Architecture Documentation**: Documented the full cloud-native free tier architecture in `docs/CLOUD_FREE_SERVICES_ARCHITECTURE.md`.
+- [x] Verified full build and test suites:
+  - Frontend unit tests (`bun test`): 9/9 passing (0 failures).
+  - Backend integration tests (`mvnw test`): 12/12 passing (BUILD SUCCESS).
+
 
 
 

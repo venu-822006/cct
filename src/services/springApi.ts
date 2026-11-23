@@ -221,6 +221,13 @@ export async function verifyRecaptcha(recaptchaToken: string) {
   });
 }
 
+export async function verifyTurnstile(turnstileToken: string) {
+  return requestJson<{ success: boolean; message?: string }>("/api/auth/verify-turnstile", {
+    method: "POST",
+    body: JSON.stringify({ turnstileToken }),
+  });
+}
+
 export async function fetchCurrentUser() {
   return requestJson<UserProfile>("/api/auth/me");
 }

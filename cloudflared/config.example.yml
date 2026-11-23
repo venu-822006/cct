@@ -1,0 +1,14 @@
+# Cloudflare Tunnel Ingress Configuration Example
+# File: config.yml
+
+tunnel: YOUR_TUNNEL_UUID
+credentials-file: /etc/cloudflared/YOUR_TUNNEL_UUID.json
+
+ingress:
+  # Map frontend / API traffic to your local Spring Boot backend container
+  - hostname: drive.yourcustomdomain.com
+    service: http://host.docker.internal:8080
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+  - service: http_status:404
