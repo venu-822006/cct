@@ -1,0 +1,5 @@
+# Cloudflare Pages Edge API Proxy to 24/7 Cloud Backend
+/api/*  https://cct-3c4n.onrender.com/api/:splat  200!
+
+# SPA Fallback for client-side routing
+/*      /index.html                               200

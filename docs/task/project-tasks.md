@@ -369,11 +369,13 @@
   - Secret Key: `0x4AAAAAAGPGsoZ9R0IzIhtmpYKaF5OiuAY`
 - [x] Upgraded `RecaptchaService.java` to dynamically support both Cloudflare Turnstile (`https://challenges.cloudflare.com/turnstile/v0/siteverify`) and Google reCAPTCHA.
 - [x] Updated `AuthModal.tsx` to automatically render Cloudflare Turnstile widget via official `turnstile/v0/api.js` script with graceful token handling and post-login verification.
-- [x] Documented Cloudflare Pages build configurations:
-  - Framework Preset: `Vite` (or None)
-  - Build command: `npm run build`
-  - Build output directory: `dist`
-- [x] Verified full build (`npm run build` -> 0 errors) and test suites: 12/12 backend tests passing (`mvnw.cmd test`, BUILD SUCCESS) and 9/9 frontend tests passing (`bun test`).
+- [x] Successfully deployed on Cloudflare Pages:
+  - Live Edge URL: `https://cct-7ti.pages.dev`
+  - Region: Earth, with global SSL/TLS and DDoS defense.
+- [x] Configured Cloudflare Pages `public/_redirects` proxying `/api/*` to the 24/7 backend (`https://cct-3c4n.onrender.com/api/:splat 200!`) and SPA routing fallback (`/* /index.html 200`).
+- [x] Verified local full-stack run: Spring Boot daemon active on port 8080 and Vite dev server active on port 5173.
+- [x] Verified all test suites pass: 12/12 backend tests (`mvnw.cmd test`, BUILD SUCCESS) and 9/9 frontend tests (`bun test`).
+
 
 
 
