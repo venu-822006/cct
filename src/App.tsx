@@ -52,13 +52,16 @@ import {
   ChevronDown,
   HelpCircle,
   SlidersHorizontal,
-  Info
+  Info,
+  Files,
+  FolderOpen
 } from "lucide-react";
 
 import {
   fetchCurrentUser,
   clearAuthToken,
   fetchFiles,
+  fetchAllFiles,
   fetchTrash,
   fetchStarred,
   fetchRecent,
@@ -72,6 +75,7 @@ import {
   downloadMultipleAsZip,
   getFilePreviewUrl,
   fetchFileContent,
+  fetchFileViewerData,
   saveFileContent,
   fetchVersions,
   restoreVersion,
@@ -101,6 +105,7 @@ import {
   type UserShareItem,
   type StorageBreakdown,
   type FileVersionItem,
+  type FileViewerData,
 } from "./services/springApi";
 
 import { AuthModal } from "./components/AuthModal";
@@ -119,7 +124,7 @@ export function App() {
 
   // Navigation & View State
   const [currentView, setCurrentView] = useState<
-    "drive" | "recent" | "starred" | "shared_with_me" | "analytics" | "trash"
+    "drive" | "all_files" | "recent" | "starred" | "shared_with_me" | "analytics" | "trash"
   >("drive");
   const [currentPath, setCurrentPath] = useState<string>("/");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -173,6 +178,9 @@ export function App() {
     ext?: string;
     item?: DriveItem;
   } | null>(null);
+  const [viewerData, setViewerData] = useState<FileViewerData | null>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [activeSheetIdx, setActiveSheetIdx] = useState(0);
 
   // Editor Modal
   const [editorItem, setEditorItem] = useState<{ id: number; name: string; content: string } | null>(null);
@@ -271,6 +279,9 @@ export function App() {
         setItems(results);
       } else if (currentView === "drive") {
         const list = await fetchFiles(currentPath);
+        setItems(list);
+      } else if (currentView === "all_files") {
+        const list = await fetchAllFiles();
         setItems(list);
       } else if (currentView === "recent") {
         const list = await fetchRecent();
@@ -511,6 +522,17 @@ export function App() {
       >
         {currentView !== "trash" ? (
           <>
+            <button
+              onClick={() => {
+                setActiveMenuId(null);
+                handleItemPreviewOrOpen(item);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <Eye className="w-4 h-4 shrink-0 text-[#0b57d0] dark:text-[#a8c7fa]" />
+              <span>{item.directory ? "Open folder" : "View file"}</span>
+            </button>
+
             <button
               onClick={() => handleOpenUserShare(item)}
               className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
@@ -780,24 +802,33 @@ export function App() {
   };
 
   // Preview click handler
-  const handleItemPreviewOrOpen = (item: DriveItem) => {
+  const handleItemPreviewOrOpen = async (item: DriveItem) => {
     if (item.directory) {
       navigateToFolder(item.path === "/" ? `/${item.name}` : `${item.path}/${item.name}`);
       return;
     }
-    const ext = item.extension.toLowerCase();
+    const ext = (item.extension || "").toLowerCase();
     const url = getFilePreviewUrl(item.id);
-    if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+    if (["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp"].includes(ext)) {
       setPreviewMedia({ url, type: "image", name: item.name, size: item.size, ext, item });
     } else if (["mp4", "webm", "mov"].includes(ext)) {
       setPreviewMedia({ url, type: "video", name: item.name, size: item.size, ext, item });
-    } else if (["mp3", "wav", "ogg", "flac"].includes(ext)) {
+    } else if (["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext)) {
       setPreviewMedia({ url, type: "audio", name: item.name, size: item.size, ext, item });
     } else if (ext === "pdf") {
       setPreviewMedia({ url, type: "pdf", name: item.name, size: item.size, ext, item });
-    } else if (["txt", "md", "js", "ts", "html", "css", "py", "java", "json", "xml", "sql", "sh"].includes(ext)) {
+    } else if (
+      [
+        "txt", "md", "log", "yml", "yaml", "ini", "env", "conf", "properties",
+        "js", "jsx", "ts", "tsx", "html", "css", "scss", "py", "java",
+        "json", "xml", "sql", "sh", "bat", "ps1", "rs", "go", "c", "cpp", "h"
+      ].includes(ext)
+    ) {
       handleOpenEditor(item);
     } else {
+      setViewerData(null);
+      setActiveSheetIdx(0);
+      setViewerLoading(true);
       setPreviewMedia({
         url: getFileDownloadUrl(item.id),
         type: "document",
@@ -806,6 +837,22 @@ export function App() {
         ext,
         item,
       });
+      try {
+        const data = await fetchFileViewerData(item.id);
+        setViewerData(data);
+      } catch (err: any) {
+        setViewerData({
+          id: item.id,
+          name: item.name,
+          extension: ext,
+          contentType: item.contentType,
+          size: item.size,
+          kind: "unsupported",
+          note: err?.message || "Unable to load inline preview.",
+        });
+      } finally {
+        setViewerLoading(false);
+      }
     }
   };
 
@@ -1114,6 +1161,7 @@ export function App() {
               <button
                 onClick={() => {
                   setCurrentView("drive");
+                  setCurrentPath("/");
                   setSearchQuery("");
                 }}
                 className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
@@ -1124,6 +1172,21 @@ export function App() {
               >
                 <HardDrive className="w-4 h-4" />
                 <span>My Drive</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setCurrentView("all_files");
+                  setSearchQuery("");
+                }}
+                className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
+                  currentView === "all_files"
+                    ? "theme-pill-active font-semibold"
+                    : "theme-text-sub hover:theme-text-main hover:bg-[#eaebef] dark:hover:bg-[#282a2c]"
+                }`}
+              >
+                <Files className="w-4 h-4" />
+                <span>All Files</span>
               </button>
 
               <button
@@ -1288,6 +1351,14 @@ export function App() {
                 )
               )}
 
+              {currentView === "all_files" && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-normal theme-text-main font-sans">All Files</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f0f4f9] dark:bg-[#282a2c] theme-text-sub border border-[#e0e2ec] dark:border-[#3c4043]">
+                    {filteredItems.length}
+                  </span>
+                </div>
+              )}
               {currentView === "recent" && <span className="text-xl font-normal theme-text-main font-sans">Recent</span>}
               {currentView === "starred" && <span className="text-xl font-normal theme-text-main font-sans">Starred</span>}
               {currentView === "shared_with_me" && <span className="text-xl font-normal theme-text-main font-sans">Shared with me</span>}
@@ -1335,7 +1406,7 @@ export function App() {
               )}
 
               {/* Sort Selector */}
-              {["drive", "recent", "starred"].includes(currentView) && (
+              {["drive", "all_files", "recent", "starred"].includes(currentView) && (
                 <div className="flex items-center gap-1 bg-[#f0f4f9] dark:bg-[#282a2c] border border-[#e0e2ec] dark:border-[#3c4043] rounded-full px-3 py-1.5 text-xs theme-text-sub">
                   <ArrowUpDown className="w-3.5 h-3.5 theme-text-muted" />
                   <select
@@ -1387,7 +1458,7 @@ export function App() {
           </div>
 
           {/* Filter Pills */}
-          {["drive", "starred", "recent"].includes(currentView) && (
+          {["drive", "all_files", "starred", "recent"].includes(currentView) && (
             <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
               {(["all", "document", "image", "audio", "video", "archive", "code"] as const).map((filter) => (
                 <button
@@ -1511,7 +1582,7 @@ export function App() {
 
 
           {/* VIEW: Files (Grid & List) */}
-          {["drive", "recent", "starred", "trash"].includes(currentView) && (
+          {["drive", "all_files", "recent", "starred", "trash"].includes(currentView) && (
             <>
               {loading ? (
                 <div className="flex-1 flex items-center justify-center py-16">
@@ -1533,7 +1604,7 @@ export function App() {
                   {filteredItems.filter((i) => i.directory).length > 0 && (
                     <div>
                       <h3 className="text-sm font-medium theme-text-sub mb-3">Folders</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {filteredItems
                           .filter((i) => i.directory)
                           .map((item) => (
@@ -1546,16 +1617,16 @@ export function App() {
                               } transition-all cursor-pointer shadow-xs`}
                               onClick={() => handleItemPreviewOrOpen(item)}
                             >
-                              <div className="flex items-center gap-3 min-w-0 pr-2">
+                              <div className="flex items-center gap-2.5 min-w-0 pr-1 flex-1">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleSelectItem(item.id);
                                   }}
-                                  className={`p-0.5 rounded transition-opacity ${
+                                  className={`p-0.5 rounded shrink-0 ${
                                     selectedIds.has(item.id)
-                                      ? "opacity-100 text-[#0b57d0] dark:text-[#a8c7fa]"
-                                      : "opacity-0 group-hover:opacity-100 theme-text-muted"
+                                      ? "flex text-[#0b57d0] dark:text-[#a8c7fa]"
+                                      : "hidden group-hover:flex theme-text-muted"
                                   }`}
                                 >
                                   {selectedIds.has(item.id) ? (
@@ -1572,15 +1643,15 @@ export function App() {
 
                               {/* Action Menu with Three Dots */}
                               <div
-                                className="flex items-center gap-1 shrink-0 relative"
+                                className="flex items-center gap-0.5 shrink-0 relative"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {currentView !== "trash" ? (
                                   <>
                                     <button
                                       onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
-                                      className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity ${
-                                        item.starred ? "text-amber-500 !opacity-100" : "theme-text-muted hover:theme-text-main"
+                                      className={`p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 ${
+                                        item.starred ? "flex text-amber-500" : "hidden group-hover:flex theme-text-muted hover:theme-text-main"
                                       }`}
                                       title="Star"
                                     >
@@ -1593,8 +1664,8 @@ export function App() {
                                         onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
                                         className={`p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
                                           activeMenuId === item.id
-                                            ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
-                                            : "theme-text-muted hover:theme-text-main opacity-70 sm:opacity-0 sm:group-hover:opacity-100"
+                                            ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                            : "theme-text-muted hover:theme-text-main"
                                         }`}
                                         title="More options"
                                       >
@@ -1631,10 +1702,15 @@ export function App() {
                       {filteredItems.filter((i) => i.directory).length > 0 && (
                         <h3 className="text-sm font-medium theme-text-sub mb-3">Files</h3>
                       )}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {filteredItems
                           .filter((i) => !i.directory)
-                          .map((item) => (
+                          .map((item) => {
+                            const isImg = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
+                              (item.extension || "").toLowerCase()
+                            );
+                            const showLocationBadge = currentView !== "drive" || searchQuery.trim().length > 0;
+                            return (
                             <div
                               key={item.id}
                               className={`group bg-[#f0f4f9]/70 dark:bg-[#282a2c]/70 hover:bg-[#e9eef6] dark:hover:bg-[#333537] border ${
@@ -1644,14 +1720,30 @@ export function App() {
                               } rounded-2xl transition-all flex flex-col justify-between relative cursor-pointer shadow-xs hover:shadow-md`}
                               onClick={() => handleItemPreviewOrOpen(item)}
                             >
-                              {/* Top Preview/Icon Area */}
+                              {/* Top Preview/Thumbnail Area */}
                               <div className="h-32 bg-white/70 dark:bg-black/20 flex items-center justify-center relative p-4 border-b border-[#e0e2ec]/60 dark:border-[#3c4043]/60 rounded-t-2xl overflow-hidden">
+                                <div className="scale-125 transform transition-transform group-hover:scale-135">
+                                  {getFileIcon(item)}
+                                </div>
+
+                                {isImg && currentView !== "trash" && (
+                                  <img
+                                    src={getFilePreviewUrl(item.id)}
+                                    alt={item.name}
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                    className="absolute inset-0 w-full h-full object-cover bg-white dark:bg-[#1e1f20]"
+                                  />
+                                )}
+
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleSelectItem(item.id);
                                   }}
-                                  className={`absolute top-2.5 left-2.5 p-1 rounded-md transition-opacity ${
+                                  className={`absolute top-2.5 left-2.5 z-10 p-1 rounded-md bg-white/85 dark:bg-black/60 backdrop-blur-xs transition-opacity ${
                                     selectedIds.has(item.id)
                                       ? "opacity-100 text-[#0b57d0] dark:text-[#a8c7fa]"
                                       : "opacity-0 group-hover:opacity-100 theme-text-muted hover:theme-text-main"
@@ -1664,12 +1756,8 @@ export function App() {
                                   )}
                                 </button>
 
-                                <div className="scale-125 transform transition-transform group-hover:scale-135">
-                                  {getFileIcon(item)}
-                                </div>
-
                                 {item.starred && (
-                                  <Star className="w-4 h-4 text-amber-500 fill-current absolute top-2.5 right-2.5" />
+                                  <Star className="w-4 h-4 text-amber-500 fill-current absolute top-2.5 right-2.5 z-10 drop-shadow" />
                                 )}
                               </div>
 
@@ -1685,7 +1773,7 @@ export function App() {
                                       className={`p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${
                                         activeMenuId === item.id
                                           ? "bg-black/10 dark:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa] opacity-100"
-                                          : "theme-text-muted hover:theme-text-main opacity-70 sm:opacity-0 sm:group-hover:opacity-100"
+                                          : "theme-text-muted hover:theme-text-main opacity-80 sm:opacity-0 sm:group-hover:opacity-100"
                                       }`}
                                       title="More options"
                                     >
@@ -1694,6 +1782,21 @@ export function App() {
                                     {renderThreeDotsMenu(item, true)}
                                   </div>
                                 </div>
+
+                                {showLocationBadge && (
+                                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      onClick={() => navigateToFolder(item.path || "/")}
+                                      className="inline-flex items-center gap-1 max-w-full px-2 py-0.5 rounded-md text-[10px] font-medium bg-white/80 dark:bg-[#1e1f20] theme-text-sub border border-[#e0e2ec]/80 dark:border-[#3c4043] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] truncate"
+                                      title={`Open folder: ${item.path || "/"}`}
+                                    >
+                                      <FolderOpen className="w-3 h-3 shrink-0" />
+                                      <span className="truncate">{item.path === "/" ? "My Drive" : item.path}</span>
+                                    </button>
+                                  </div>
+                                )}
+
                                 <div className="flex justify-between items-center text-[11px] theme-text-muted mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40">
                                   <span>{formatBytes(item.size)}</span>
                                   <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
@@ -1701,11 +1804,18 @@ export function App() {
 
                                 {/* Action Row on Hover */}
                                 <div
-                                  className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-[#e0e2ec]/40 dark:border-[#3c4043]/40 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {currentView !== "trash" ? (
                                     <>
+                                      <button
+                                        onClick={() => handleItemPreviewOrOpen(item)}
+                                        className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                        title="View file"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </button>
                                       <button
                                         onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
                                         className={`p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 ${
@@ -1756,7 +1866,8 @@ export function App() {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1777,6 +1888,9 @@ export function App() {
                           </button>
                         </th>
                         <th className="py-3 px-4">Name</th>
+                        {(currentView !== "drive" || searchQuery.trim().length > 0) && (
+                          <th className="py-3 px-4">Location</th>
+                        )}
                         <th className="py-3 px-4">Owner</th>
                         <th className="py-3 px-4">Last modified</th>
                         <th className="py-3 px-4">File size</th>
@@ -1808,6 +1922,21 @@ export function App() {
                               <Star className="w-3.5 h-3.5 text-amber-500 fill-current shrink-0" />
                             )}
                           </td>
+                          {(currentView !== "drive" || searchQuery.trim().length > 0) && (
+                            <td className="py-3 px-4 text-xs" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToFolder(item.path || "/")}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f0f4f9] dark:bg-[#282a2c] theme-text-sub hover:text-[#0b57d0] dark:hover:text-[#a8c7fa]"
+                                title={`Open folder ${item.path || "/"}`}
+                              >
+                                <FolderOpen className="w-3 h-3 shrink-0" />
+                                <span className="truncate max-w-[140px]">
+                                  {item.path === "/" ? "My Drive" : item.path}
+                                </span>
+                              </button>
+                            </td>
+                          )}
                           <td className="py-3 px-4 theme-text-muted text-xs">
                             me
                           </td>
@@ -1821,6 +1950,13 @@ export function App() {
                             <div className="flex items-center justify-end gap-1">
                               {currentView !== "trash" ? (
                                 <>
+                                  <button
+                                    onClick={() => handleItemPreviewOrOpen(item)}
+                                    className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#0b57d0] dark:text-[#a8c7fa]"
+                                    title={item.directory ? "Open folder" : "View file"}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
                                   <button
                                     onClick={() => toggleStarItem(item.id).then(loadCurrentViewData)}
                                     className={`p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 ${
@@ -2225,32 +2361,200 @@ export function App() {
             )}
 
             {previewMedia.type === "document" && (
-              <div className="w-full py-10 px-6 flex flex-col items-center justify-center text-center">
-                <div className="w-24 h-24 rounded-3xl bg-[#f0f4f9] dark:bg-[#282a2c] flex items-center justify-center mb-6 shadow-inner border theme-border">
-                  {previewMedia.item ? (
-                    <div className="scale-150 transform">{getFileIcon(previewMedia.item)}</div>
-                  ) : (
-                    <FileText className="w-12 h-12 text-[#0b57d0]" />
-                  )}
-                </div>
-                <h3 className="text-base font-semibold theme-text-main max-w-lg truncate mb-1">
-                  {previewMedia.name}
-                </h3>
-                <p className="text-xs theme-text-muted mb-6">
-                  {previewMedia.ext ? `${previewMedia.ext.toUpperCase()} File • ` : ""}
-                  {previewMedia.size ? formatBytes(previewMedia.size) : "Standard File"}
-                </p>
+              <div className="w-full flex flex-col">
+                {viewerLoading ? (
+                  <div className="py-16 flex flex-col items-center justify-center gap-3">
+                    <RefreshCw className="w-8 h-8 text-[#0b57d0] dark:text-[#a8c7fa] animate-spin" />
+                    <span className="text-xs theme-text-muted">Loading file preview...</span>
+                  </div>
+                ) : viewerData?.kind === "docx" ? (
+                  <div className="w-full max-h-[65vh] overflow-y-auto bg-white dark:bg-[#1a1b1e] rounded-xl p-6 sm:p-8 border theme-border text-left shadow-inner space-y-3">
+                    {(viewerData.blocks || []).map((block, bIdx) => {
+                      if (block.type === "heading") {
+                        const cls =
+                          block.level === 1
+                            ? "text-xl font-bold theme-text-main pt-2 pb-1 border-b theme-border-subtle"
+                            : block.level === 2
+                            ? "text-lg font-semibold theme-text-main pt-2"
+                            : "text-base font-semibold theme-text-main pt-1";
+                        return (
+                          <div key={bIdx} className={cls}>
+                            {block.text}
+                          </div>
+                        );
+                      }
+                      if (block.type === "list") {
+                        return (
+                          <div key={bIdx} className="flex items-start gap-2.5 pl-3 text-sm theme-text-sub leading-relaxed">
+                            <span className="theme-text-muted select-none">•</span>
+                            <span className="whitespace-pre-wrap">{block.text}</span>
+                          </div>
+                        );
+                      }
+                      if (block.type === "table" && block.rows) {
+                        return (
+                          <div key={bIdx} className="overflow-x-auto my-3 rounded-lg border theme-border">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <tbody>
+                                {block.rows.map((row, rIdx) => (
+                                  <tr
+                                    key={rIdx}
+                                    className={
+                                      rIdx === 0
+                                        ? "bg-[#f0f4f9] dark:bg-[#282a2c] font-semibold theme-text-main"
+                                        : "border-t theme-border-subtle theme-text-sub"
+                                    }
+                                  >
+                                    {row.map((cell, cIdx) => (
+                                      <td key={cIdx} className="px-3 py-2 border-r last:border-r-0 theme-border-subtle whitespace-pre-wrap align-top">
+                                        {cell}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      }
+                      return (
+                        <p key={bIdx} className="text-sm theme-text-sub leading-relaxed whitespace-pre-wrap">
+                          {block.text}
+                        </p>
+                      );
+                    })}
+                    {(!viewerData.blocks || viewerData.blocks.length === 0) && (
+                      <p className="text-xs theme-text-muted text-center py-6">
+                        {viewerData.note || "No text blocks found in this document."}
+                      </p>
+                    )}
+                  </div>
+                ) : viewerData?.kind === "table" && viewerData.sheets && viewerData.sheets.length > 0 ? (
+                  <div className="w-full flex flex-col gap-3">
+                    {viewerData.sheets.length > 1 && (
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                        {viewerData.sheets.map((sheet, idx) => (
+                          <button
+                            key={sheet.name}
+                            onClick={() => setActiveSheetIdx(idx)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                              activeSheetIdx === idx
+                                ? "bg-[#c2e7ff] text-[#001d35] border-[#0b57d0]/40 dark:bg-[#004a77] dark:text-[#c2e7ff]"
+                                : "theme-bg-surface theme-text-sub theme-border"
+                            }`}
+                          >
+                            {sheet.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {(() => {
+                      const activeSheet = viewerData.sheets[activeSheetIdx] || viewerData.sheets[0];
+                      return (
+                        <div className="w-full max-h-[60vh] overflow-auto bg-white dark:bg-[#1a1b1e] rounded-xl border theme-border shadow-inner">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-[#f0f4f9] dark:bg-[#282a2c] sticky top-0 z-10 border-b theme-border">
+                              {activeSheet.rows[0] && (
+                                <tr>
+                                  <th className="px-2.5 py-2 theme-text-muted font-mono border-r theme-border-subtle w-10">#</th>
+                                  {activeSheet.rows[0].map((cell, cIdx) => (
+                                    <th key={cIdx} className="px-3 py-2 font-semibold theme-text-main border-r last:border-r-0 theme-border-subtle whitespace-nowrap">
+                                      {cell || `Col ${cIdx + 1}`}
+                                    </th>
+                                  ))}
+                                </tr>
+                              )}
+                            </thead>
+                            <tbody className="divide-y theme-border-subtle">
+                              {activeSheet.rows.slice(1).map((row, rIdx) => (
+                                <tr key={rIdx} className="hover:bg-[#f0f4f9]/60 dark:hover:bg-[#282a2c]/60">
+                                  <td className="px-2.5 py-1.5 theme-text-muted font-mono border-r theme-border-subtle">{rIdx + 2}</td>
+                                  {row.map((cell, cIdx) => (
+                                    <td key={cIdx} className="px-3 py-1.5 theme-text-sub border-r last:border-r-0 theme-border-subtle whitespace-pre-wrap">
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {activeSheet.truncated && (
+                            <p className="text-[11px] theme-text-muted p-2 text-center border-t theme-border-subtle">
+                              Preview truncated to first 500 rows. Download file for complete dataset.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : viewerData?.kind === "slides" && viewerData.slides ? (
+                  <div className="w-full max-h-[65vh] overflow-y-auto space-y-4 pr-1">
+                    {viewerData.slides.map((slide) => (
+                      <div key={slide.slideNumber} className="bg-white dark:bg-[#1a1b1e] border theme-border rounded-xl p-5 shadow-xs text-left">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0b57d0] dark:text-[#a8c7fa] mb-1">
+                          Slide {slide.slideNumber}
+                        </div>
+                        <h4 className="text-base font-bold theme-text-main mb-2">{slide.title}</h4>
+                        <div className="space-y-1.5">
+                          {slide.paragraphs.map((p, idx) => (
+                            <p key={idx} className="text-sm theme-text-sub whitespace-pre-wrap">{p}</p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : viewerData?.kind === "archive" && viewerData.entries ? (
+                  <div className="w-full max-h-[60vh] overflow-auto bg-white dark:bg-[#1a1b1e] rounded-xl border theme-border shadow-inner">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-[#f0f4f9] dark:bg-[#282a2c] sticky top-0 border-b theme-border">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold theme-text-main">Entry Path</th>
+                          <th className="px-3 py-2 font-semibold theme-text-main text-right">Size</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y theme-border-subtle">
+                        {viewerData.entries.map((entry, idx) => (
+                          <tr key={idx}>
+                            <td className="px-3 py-1.5 theme-text-sub font-mono flex items-center gap-2">
+                              {entry.directory ? <Folder className="w-3.5 h-3.5 text-amber-500 shrink-0" /> : <FileText className="w-3.5 h-3.5 theme-text-muted shrink-0" />}
+                              <span className="truncate">{entry.name}</span>
+                            </td>
+                            <td className="px-3 py-1.5 theme-text-muted text-right">
+                              {entry.directory ? "—" : formatBytes(entry.size)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : viewerData?.kind === "text" && viewerData.textContent !== undefined ? (
+                  <pre className="w-full max-h-[65vh] overflow-auto bg-white dark:bg-[#1a1b1e] rounded-xl p-5 border theme-border text-xs font-mono theme-text-sub whitespace-pre-wrap text-left shadow-inner">
+                    {viewerData.textContent}
+                  </pre>
+                ) : (
+                  <div className="w-full py-10 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-24 h-24 rounded-3xl bg-[#f0f4f9] dark:bg-[#282a2c] flex items-center justify-center mb-6 shadow-inner border theme-border">
+                      {previewMedia.item ? (
+                        <div className="scale-150 transform">{getFileIcon(previewMedia.item)}</div>
+                      ) : (
+                        <FileText className="w-12 h-12 text-[#0b57d0]" />
+                      )}
+                    </div>
+                    <h3 className="text-base font-semibold theme-text-main max-w-lg truncate mb-1">
+                      {previewMedia.name}
+                    </h3>
+                    <p className="text-xs theme-text-muted mb-2">
+                      {previewMedia.ext ? `${previewMedia.ext.toUpperCase()} File • ` : ""}
+                      {previewMedia.size ? formatBytes(previewMedia.size) : "Standard File"}
+                    </p>
+                    {viewerData?.note && (
+                      <p className="text-xs theme-text-muted max-w-md mb-6">{viewerData.note}</p>
+                    )}
+                  </div>
+                )}
 
-                <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
-                  <a
-                    href={previewMedia.url}
-                    download={previewMedia.name}
-                    className="flex-1 min-w-[140px] px-5 py-2.5 theme-btn-primary text-xs font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download File</span>
-                  </a>
-
+                {/* Modal Footer Actions */}
+                <div className="flex flex-wrap items-center justify-end gap-2 mt-4 pt-3 border-t theme-border-subtle">
                   {previewMedia.item && (
                     <button
                       onClick={() => {
@@ -2258,9 +2562,9 @@ export function App() {
                         setPreviewMedia(null);
                         handleOpenUserShare(itm);
                       }}
-                      className="px-4 py-2.5 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="px-4 py-2 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <Share2 className="w-4 h-4" />
+                      <Share2 className="w-3.5 h-3.5" />
                       <span>Share</span>
                     </button>
                   )}
@@ -2272,12 +2576,21 @@ export function App() {
                         setPreviewMedia(null);
                         handleOpenVersions(itm);
                       }}
-                      className="px-4 py-2.5 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="px-4 py-2 theme-bg-surface border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <History className="w-4 h-4" />
+                      <History className="w-3.5 h-3.5" />
                       <span>Versions</span>
                     </button>
                   )}
+
+                  <a
+                    href={previewMedia.url}
+                    download={previewMedia.name}
+                    className="px-4 py-2 theme-btn-primary text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download File</span>
+                  </a>
                 </div>
               </div>
             )}

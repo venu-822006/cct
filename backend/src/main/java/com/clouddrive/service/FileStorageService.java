@@ -138,6 +138,17 @@ public class FileStorageService {
                 .toList();
     }
 
+    /**
+     * Lists all non-trashed files owned by the user across all folders, ordered most recently updated first.
+     */
+    @Transactional(readOnly = true)
+    public List<FileItemDTO> listAllFiles(User user) {
+        return fileItemRepository.findByOwnerAndIsTrashedFalseAndIsDirectoryFalseOrderByUpdatedAtDesc(user)
+                .stream()
+                .map(FileItemDTO::fromEntity)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<FileItemDTO> search(User user, String query) {
         if (!StringUtils.hasText(query)) {

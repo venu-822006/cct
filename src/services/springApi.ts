@@ -191,6 +191,46 @@ export interface StorageBreakdown {
   totalQuotaBytes: number;
 }
 
+export interface ViewerDocBlock {
+  type: "heading" | "paragraph" | "list" | "table";
+  level?: number;
+  text?: string;
+  rows?: string[][];
+}
+
+export interface ViewerSheetData {
+  name: string;
+  rows: string[][];
+  truncated: boolean;
+}
+
+export interface ViewerSlideData {
+  slideNumber: number;
+  title: string;
+  paragraphs: string[];
+}
+
+export interface ViewerArchiveEntry {
+  name: string;
+  size: number;
+  directory: boolean;
+}
+
+export interface FileViewerData {
+  id: number;
+  name: string;
+  extension: string;
+  contentType: string;
+  size: number;
+  kind: "docx" | "table" | "slides" | "archive" | "text" | "unsupported";
+  textContent?: string;
+  blocks?: ViewerDocBlock[];
+  sheets?: ViewerSheetData[];
+  slides?: ViewerSlideData[];
+  entries?: ViewerArchiveEntry[];
+  note?: string;
+}
+
 // Auth APIs
 export async function registerUser(username: string, email: string, password: string, fullName?: string) {
   return requestJson<UserProfile>("/api/auth/register", {
@@ -234,6 +274,10 @@ export async function changeUserPassword(oldPassword: string, newPassword: strin
 // File Operations APIs
 export async function fetchFiles(path: string = "/") {
   return requestJson<DriveItem[]>(`/api/files?path=${encodeURIComponent(path)}`);
+}
+
+export async function fetchAllFiles() {
+  return requestJson<DriveItem[]>("/api/files/all");
 }
 
 export async function fetchTrash() {
@@ -317,6 +361,10 @@ export function getFilePreviewUrl(id: number) {
 
 export async function fetchFileContent(id: number) {
   return requestJson<{ id: number; name: string; content: string }>(`/api/files/content/${id}`);
+}
+
+export async function fetchFileViewerData(id: number) {
+  return requestJson<FileViewerData>(`/api/files/viewer/${id}`);
 }
 
 export async function saveFileContent(id: number, content: string) {

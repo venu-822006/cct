@@ -401,6 +401,17 @@
 - [x] Verified full test suites pass: 17/17 backend tests (`mvn test`, BUILD SUCCESS) and 9/9 frontend tests (`bun test`).
 - [x] Verified production packaging: built `backend/target/personal-cloud-drive.jar` and verified daemon execution on port 8080.
 
+## 34. All Files View, Universal Inline File Viewer & Grid Readability
+- [x] Added `GET /api/files/all` endpoint in `FileController.java`, `FileStorageService.listAllFiles`, and `FileItemRepository.java` to list every non-trashed file owned by the user across all folders without a top-20 cap.
+- [x] Created `FileViewerDTO.java` and `FileViewerService.java` (`GET /api/files/viewer/{id}`) with XXE-hardened JDK XML/ZIP parsers supporting inline preview extraction for:
+  - Word documents (`.docx` paragraphs, headings, lists, structured tables, and `<w:sdt>` containers).
+  - Excel workbooks (`.xlsx` multi-sheet shared strings & grid alignment) and delimited tables (`.csv`, `.tsv`).
+  - Presentations (`.pptx` slides), archives (`.zip`, `.jar`), and expanded text/code formats (`.log`, `.yml`, `.yaml`, `.ini`, `.env`, `.tsx`, `.jsx`, etc.).
+- [x] Added **All Files** navigation item in `src/App.tsx` sidebar with file counter badge, clickable folder location badges/columns (`navigateToFolder`), live image card thumbnails in Grid view, explicit **View** (`Eye`) action buttons, and sidebar `My Drive` root path reset.
+- [x] Fixed Grid View folder card title truncation (`P..`) by adjusting responsive columns and collapsing unhovered selection/star action controls.
+- [x] Verified full build & tests: 19/19 backend tests pass (`mvnw.cmd package`, `BUILD SUCCESS`), `npm run build` compiles cleanly, and 9/9 frontend tests pass (`bun test`).
+
+
 
 
 

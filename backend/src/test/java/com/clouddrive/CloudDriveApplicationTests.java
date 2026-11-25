@@ -7,19 +7,29 @@ import com.clouddrive.security.JwtTokenProvider;
 import com.clouddrive.security.RateLimitingService;
 import com.clouddrive.service.AuthService;
 import com.clouddrive.service.FileStorageService;
+import com.clouddrive.service.FileViewerService;
 import com.clouddrive.service.ShareService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class CloudDriveApplicationTests {
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @Autowired
     private AuthService authService;
@@ -29,6 +39,9 @@ class CloudDriveApplicationTests {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private FileViewerService fileViewerService;
 
     @Autowired
     private ShareService shareService;
@@ -375,5 +388,143 @@ class CloudDriveApplicationTests {
         List<FileItemDTO> movedDeepFiles = fileStorageService.listFiles(user, "/Sub");
         assertTrue(movedDeepFiles.stream().anyMatch(f -> f.getName().equals("deep.txt")),
                 "Moving folder must recursively update nested children's paths to /Sub");
+    }
+
+    @Test
+    void testListAllFilesAcrossFolders() {
+        String u1 = "allfiles_" + uid();
+        String u2 = "other_" + uid();
+
+        RegisterRequest r1 = new RegisterRequest();
+        r1.setUsername(u1);
+        r1.setEmail(u1 + "@test.com");
+        r1.setPassword("pass1234");
+        authService.register(r1);
+
+        RegisterRequest r2 = new RegisterRequest();
+        r2.setUsername(u2);
+        r2.setEmail(u2 + "@test.com");
+        r2.setPassword("pass1234");
+        authService.register(r2);
+
+        User user1 = authService.getUserByUsername(u1);
+        User user2 = authService.getUserByUsername(u2);
+
+        fileStorageService.createFolder(user1, "/", "Reports");
+        fileStorageService.createBlankFile(user1, "/", "root.txt", "root");
+        fileStorageService.createBlankFile(user1, "/Reports", "nested.txt", "nested");
+        FileItemDTO trashed = fileStorageService.createBlankFile(user1, "/", "deleted.txt", "bye");
+        fileStorageService.moveToTrash(user1, trashed.getId());
+
+        fileStorageService.createBlankFile(user2, "/", "private.txt", "secret");
+
+        List<FileItemDTO> allFiles = fileStorageService.listAllFiles(user1);
+        assertEquals(2, allFiles.size());
+        assertTrue(allFiles.stream().anyMatch(f -> f.getName().equals("root.txt") && f.getPath().equals("/")));
+        assertTrue(allFiles.stream().anyMatch(f -> f.getName().equals("nested.txt") && f.getPath().equals("/Reports")));
+        assertFalse(allFiles.stream().anyMatch(f -> f.getName().equals("deleted.txt")));
+        assertFalse(allFiles.stream().anyMatch(f -> f.getName().equals("private.txt")));
+    }
+
+    @Test
+    void testUniversalFileViewerDocxCsvXlsxZip() throws Exception {
+        String u = "viewer_" + uid();
+        RegisterRequest r = new RegisterRequest();
+        r.setUsername(u);
+        r.setEmail(u + "@test.com");
+        r.setPassword("pass1234");
+        authService.register(r);
+        User user = authService.getUserByUsername(u);
+
+        // 1. Create valid minimal DOCX in memory
+        ByteArrayOutputStream docxBaos = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(docxBaos)) {
+            zos.putNextEntry(new java.util.zip.ZipEntry("word/document.xml"));
+            String docXml = """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Project Summary</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Hello from Cloud Drive DOCX viewer.</w:t></w:r></w:p>
+                    <w:sdt><w:sdtContent><w:p><w:r><w:t>Inside SDT</w:t></w:r></w:p></w:sdtContent></w:sdt>
+                    <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Col1</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Col2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+                  </w:body>
+                </w:document>
+                """;
+            zos.write(docXml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zos.closeEntry();
+        }
+        MockMultipartFile docxFile = new MockMultipartFile("files", "report.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxBaos.toByteArray());
+
+        // 2. Create CSV file
+        MockMultipartFile csvFile = new MockMultipartFile("files", "metrics.csv",
+                "text/csv", "Name,Score\nAlice,95\n\"Bob, Jr\",88\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        // 3. Create minimal XLSX
+        ByteArrayOutputStream xlsxBaos = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(xlsxBaos)) {
+            zos.putNextEntry(new java.util.zip.ZipEntry("xl/sharedStrings.xml"));
+            zos.write("<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>Item</t></si><si><t>Cloud</t></si></sst>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zos.closeEntry();
+            zos.putNextEntry(new java.util.zip.ZipEntry("xl/workbook.xml"));
+            zos.write("<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Inventory\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zos.closeEntry();
+            zos.putNextEntry(new java.util.zip.ZipEntry("xl/worksheets/sheet1.xml"));
+            zos.write("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"C1\"><v>42</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c></row></sheetData></worksheet>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zos.closeEntry();
+        }
+        MockMultipartFile xlsxFile = new MockMultipartFile("files", "sheet.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsxBaos.toByteArray());
+
+        List<FileItemDTO> uploaded = fileStorageService.uploadFiles(user, "/", new MockMultipartFile[]{docxFile, csvFile, xlsxFile});
+
+        FileViewerDTO docxViewer = fileViewerService.buildViewerData(user, uploaded.get(0).getId());
+        assertEquals("docx", docxViewer.getKind());
+        assertEquals(4, docxViewer.getBlocks().size());
+        assertEquals("heading", docxViewer.getBlocks().get(0).getType());
+        assertEquals("Project Summary", docxViewer.getBlocks().get(0).getText());
+        assertEquals("Inside SDT", docxViewer.getBlocks().get(2).getText());
+        assertEquals("table", docxViewer.getBlocks().get(3).getType());
+        assertEquals(List.of("Col1", "Col2"), docxViewer.getBlocks().get(3).getRows().get(0));
+
+        FileViewerDTO csvViewer = fileViewerService.buildViewerData(user, uploaded.get(1).getId());
+        assertEquals("table", csvViewer.getKind());
+        assertEquals(3, csvViewer.getSheets().get(0).getRows().size());
+        assertEquals("Bob, Jr", csvViewer.getSheets().get(0).getRows().get(2).get(0));
+
+        FileViewerDTO xlsxViewer = fileViewerService.buildViewerData(user, uploaded.get(2).getId());
+        assertEquals("table", xlsxViewer.getKind());
+        assertEquals("Inventory", xlsxViewer.getSheets().get(0).getName());
+        assertEquals(List.of("Item", "", "42"), xlsxViewer.getSheets().get(0).getRows().get(0));
+        assertEquals(List.of("Cloud", "", ""), xlsxViewer.getSheets().get(0).getRows().get(1));
+
+        // 4. Verify HTTP REST endpoints /api/files/all and /api/files/viewer/{id}
+        String u2 = "stranger_" + uid();
+        RegisterRequest r2 = new RegisterRequest();
+        r2.setUsername(u2);
+        r2.setEmail(u2 + "@test.com");
+        r2.setPassword("pass1234");
+        AuthResponse u2Auth = authService.register(r2);
+
+        String jwt = jwtTokenProvider.generateTokenFromUsername(user.getUsername());
+
+        mockMvc.perform(get("/api/files/all"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/files/all")
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
+
+        mockMvc.perform(get("/api/files/viewer/" + uploaded.get(0).getId())
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.kind").value("docx"))
+                .andExpect(jsonPath("$.blocks[0].text").value("Project Summary"));
+
+        // Stranger must not access another user's file via viewer API
+        mockMvc.perform(get("/api/files/viewer/" + uploaded.get(0).getId())
+                        .header("Authorization", "Bearer " + u2Auth.getToken()))
+                .andExpect(status().isBadRequest());
     }
 }

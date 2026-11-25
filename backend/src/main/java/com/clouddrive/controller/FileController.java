@@ -5,6 +5,7 @@ import com.clouddrive.entity.FileItem;
 import com.clouddrive.entity.User;
 import com.clouddrive.service.AuthService;
 import com.clouddrive.service.FileStorageService;
+import com.clouddrive.service.FileViewerService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
@@ -25,10 +26,14 @@ import java.util.Map;
 public class FileController {
 
     private final FileStorageService fileStorageService;
+    private final FileViewerService fileViewerService;
     private final AuthService authService;
 
-    public FileController(FileStorageService fileStorageService, AuthService authService) {
+    public FileController(FileStorageService fileStorageService,
+                          FileViewerService fileViewerService,
+                          AuthService authService) {
         this.fileStorageService = fileStorageService;
+        this.fileViewerService = fileViewerService;
         this.authService = authService;
     }
 
@@ -40,6 +45,11 @@ public class FileController {
     public ResponseEntity<List<FileItemDTO>> listFiles(@AuthenticationPrincipal UserDetails userDetails,
                                                        @RequestParam(defaultValue = "/") String path) {
         return ResponseEntity.ok(fileStorageService.listFiles(getUser(userDetails), path));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<FileItemDTO>> listAllFiles(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(fileStorageService.listAllFiles(getUser(userDetails)));
     }
 
     @GetMapping("/trash")
@@ -177,6 +187,19 @@ public class FileController {
             return ResponseEntity.ok(content);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/viewer/{id}")
+    public ResponseEntity<?> getFileViewerData(@AuthenticationPrincipal UserDetails userDetails,
+                                               @PathVariable Long id) {
+        try {
+            FileViewerDTO viewer = fileViewerService.buildViewerData(getUser(userDetails), id);
+            return ResponseEntity.ok(viewer);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to load file preview"));
         }
     }
 

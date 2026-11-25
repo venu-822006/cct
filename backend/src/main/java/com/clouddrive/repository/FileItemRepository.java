@@ -21,6 +21,8 @@ public interface FileItemRepository extends JpaRepository<FileItem, Long> {
 
     List<FileItem> findTop20ByOwnerAndIsTrashedFalseAndIsDirectoryFalseOrderByUpdatedAtDesc(User owner);
 
+    List<FileItem> findByOwnerAndIsTrashedFalseAndIsDirectoryFalseOrderByUpdatedAtDesc(User owner);
+
     List<FileItem> findByOwnerAndNameContainingIgnoreCaseAndIsTrashedFalse(User owner, String name);
 
     Optional<FileItem> findByIdAndOwner(Long id, User owner);
