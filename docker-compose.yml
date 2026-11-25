@@ -1,18 +1,46 @@
 services:
+  minio:
+    image: minio/minio:latest
+    container_name: clouddrive-minio
+    ports:
+      - "9000:9000" # MinIO S3 API
+      - "9001:9001" # MinIO Web Console UI
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   cloud-drive:
     build: .
+    container_name: clouddrive-app
     ports:
-      - "3033:3033"
+      - "8080:8080"
     environment:
-      PORT: 3033
-      FILE_ROOT: /data
-      ADMIN_PASSWORD: change-me
-      SESSION_SECRET: change-me
-      AUDIT_LOG_PATH: /app/logs/audit.log
-    # Optionally load environment variables from .env (Compose-level).
-    # env_file:
-    #   - .env
-    # Override host mount paths via HOST_DATA_PATH / HOST_LOGS_PATH in .env if needed.
+      PORT: 8080
+      STORAGE_TYPE: minio
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: clouddrive
+      MINIO_AUTO_CREATE_BUCKET: "true"
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/clouddrivedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
     volumes:
-      - ${HOST_DATA_PATH:-./data}:/data
-      - ${HOST_LOGS_PATH:-./logs}:/app/logs
+      - app-data:/app/data
+      - app-storage:/app/storage_root
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  minio-data:
+  app-data:
+  app-storage:

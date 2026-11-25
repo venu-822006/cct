@@ -11,6 +11,7 @@ spring:
 
 app:
   storage:
+    type: local
     base-dir: ./target/test-storage
     default-quota-bytes: 524288000
   jwt:

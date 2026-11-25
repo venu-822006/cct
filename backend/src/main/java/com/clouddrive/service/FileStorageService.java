@@ -8,22 +8,21 @@ import com.clouddrive.repository.FileItemRepository;
 import com.clouddrive.repository.FileVersionRepository;
 import com.clouddrive.repository.ShareLinkRepository;
 import com.clouddrive.repository.UserRepository;
+import com.clouddrive.storage.StorageProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -37,6 +36,7 @@ public class FileStorageService {
     private final ShareLinkRepository shareLinkRepository;
     private final FileVersionRepository fileVersionRepository;
     private final ActivityService activityService;
+    private final StorageProvider storageProvider;
 
     @Value("${app.storage.base-dir:./storage_root}")
     private String baseDir;
@@ -48,12 +48,14 @@ public class FileStorageService {
                               UserRepository userRepository,
                               ShareLinkRepository shareLinkRepository,
                               FileVersionRepository fileVersionRepository,
-                              ActivityService activityService) {
+                              ActivityService activityService,
+                              StorageProvider storageProvider) {
         this.fileItemRepository = fileItemRepository;
         this.userRepository = userRepository;
         this.shareLinkRepository = shareLinkRepository;
         this.fileVersionRepository = fileVersionRepository;
         this.activityService = activityService;
+        this.storageProvider = storageProvider;
     }
 
     private Path getUserStoragePath(User user) {
@@ -208,33 +210,25 @@ public class FileStorageService {
                     + ((quota - currentUsed) / (1024 * 1024)) + " MB.");
         }
 
-        Path userDir = getUserStoragePath(user);
         String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-        Path filePath = userDir.resolve(uniquePrefix + "_" + cleanName).normalize();
-        validatePathInsideUserRoot(filePath, userDir);
+        String storageKey = "users/" + user.getUsername() + "/" + uniquePrefix + "_" + cleanName;
+        String storedKey = storageProvider.store(storageKey, contentBytes, "text/plain");
 
-        try {
-            Files.write(filePath, contentBytes);
-            long size = Files.size(filePath);
+        FileItem item = new FileItem();
+        item.setName(cleanName);
+        item.setPath(normalizedPath);
+        item.setDirectory(false);
+        item.setSize(incomingSize);
+        item.setContentType("text/plain");
+        item.setExtension(extractExtension(cleanName));
+        item.setDiskPath(storedKey);
+        item.setOwner(user);
+        item.setCreatedAt(LocalDateTime.now());
+        item.setUpdatedAt(LocalDateTime.now());
 
-            FileItem item = new FileItem();
-            item.setName(cleanName);
-            item.setPath(normalizedPath);
-            item.setDirectory(false);
-            item.setSize(size);
-            item.setContentType("text/plain");
-            item.setExtension(extractExtension(cleanName));
-            item.setDiskPath(filePath.toString());
-            item.setOwner(user);
-            item.setCreatedAt(LocalDateTime.now());
-            item.setUpdatedAt(LocalDateTime.now());
-
-            FileItem saved = fileItemRepository.save(item);
-            activityService.log(user, "CREATE_DOC", cleanName, "Created new file in " + normalizedPath);
-            return FileItemDTO.fromEntity(saved);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create blank file", e);
-        }
+        FileItem saved = fileItemRepository.save(item);
+        activityService.log(user, "CREATE_DOC", cleanName, "Created new file in " + normalizedPath);
+        return FileItemDTO.fromEntity(saved);
     }
 
     @Transactional
@@ -278,30 +272,27 @@ public class FileStorageService {
 
                 // Write new content
                 String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-                Path newTarget = userDir.resolve(uniquePrefix + "_" + originalName).normalize();
-                validatePathInsideUserRoot(newTarget, userDir);
+                String storageKey = "users/" + user.getUsername() + "/" + uniquePrefix + "_" + originalName;
                 try {
-                    Files.copy(file.getInputStream(), newTarget, StandardCopyOption.REPLACE_EXISTING);
+                    String storedKey = storageProvider.store(storageKey, file.getInputStream(), file.getSize(), file.getContentType());
+                    existingItem.setDiskPath(storedKey);
+                    existingItem.setSize(file.getSize());
+                    existingItem.setVersionCount(existingItem.getVersionCount() + 1);
+                    existingItem.setUpdatedAt(LocalDateTime.now());
+                    FileItem saved = fileItemRepository.save(existingItem);
+                    uploaded.add(FileItemDTO.fromEntity(saved));
+                    activityService.log(user, "UPLOAD_VERSION", originalName, "Uploaded new version (v" + saved.getVersionCount() + ")");
+                    continue;
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to save new upload", e);
                 }
-
-                existingItem.setDiskPath(newTarget.toString());
-                existingItem.setSize(file.getSize());
-                existingItem.setVersionCount(existingItem.getVersionCount() + 1);
-                existingItem.setUpdatedAt(LocalDateTime.now());
-                FileItem saved = fileItemRepository.save(existingItem);
-                uploaded.add(FileItemDTO.fromEntity(saved));
-                activityService.log(user, "UPLOAD_VERSION", originalName, "Uploaded new version (v" + saved.getVersionCount() + ")");
-                continue;
             }
 
             String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-            String diskFileName = uniquePrefix + "_" + originalName;
-            Path targetLocation = userDir.resolve(diskFileName).normalize();
-            validatePathInsideUserRoot(targetLocation, userDir);
+            String storageKey = "users/" + user.getUsername() + "/" + uniquePrefix + "_" + originalName;
+            String storedKey;
             try {
-                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+                storedKey = storageProvider.store(storageKey, file.getInputStream(), file.getSize(), file.getContentType());
             } catch (IOException e) {
                 throw new RuntimeException("Could not store file " + originalName, e);
             }
@@ -313,7 +304,7 @@ public class FileStorageService {
             item.setSize(file.getSize());
             item.setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream");
             item.setExtension(extractExtension(originalName));
-            item.setDiskPath(targetLocation.toString());
+            item.setDiskPath(storedKey);
             item.setOwner(user);
             item.setCreatedAt(LocalDateTime.now());
             item.setUpdatedAt(LocalDateTime.now());
@@ -334,16 +325,11 @@ public class FileStorageService {
         FileItem item = fileItemRepository.findByIdAndOwner(fileId, user)
                 .orElseThrow(() -> new IllegalArgumentException("File not found or permission denied"));
 
-        try {
-            Path filePath = Paths.get(item.getDiskPath()).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            } else {
-                throw new RuntimeException("File not found on storage server");
-            }
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("File path is invalid", e);
+        Resource resource = storageProvider.loadAsResource(item.getDiskPath());
+        if (resource.exists()) {
+            return resource;
+        } else {
+            throw new RuntimeException("File not found on storage server");
         }
     }
 
@@ -359,12 +345,11 @@ public class FileStorageService {
         if (item.isDirectory()) {
             throw new IllegalArgumentException("Cannot open folder as text");
         }
-        try {
-            Path path = Paths.get(item.getDiskPath());
-            String text = Files.readString(path);
+        try (InputStream is = storageProvider.loadAsStream(item.getDiskPath())) {
+            String text = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             return new FileContentDTO(item.getId(), item.getName(), text);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read file content: " + e.getMessage());
+            throw new RuntimeException("Failed to read file content: " + e.getMessage(), e);
         }
     }
 
@@ -384,8 +369,6 @@ public class FileStorageService {
         }
 
         try {
-            Path currentPath = Paths.get(item.getDiskPath());
-
             // Backup existing version
             FileVersion version = new FileVersion(
                     item,
@@ -396,15 +379,12 @@ public class FileStorageService {
             );
             fileVersionRepository.save(version);
 
-            // Create new disk file for edited version to preserve previous version history
-            Path userDir = getUserStoragePath(user);
+            // Create new storage object for edited version to preserve previous version history
             String uniquePrefix = UUID.randomUUID().toString().substring(0, 8);
-            Path newDiskPath = userDir.resolve(uniquePrefix + "_" + item.getName()).normalize();
-            validatePathInsideUserRoot(newDiskPath, userDir);
+            String storageKey = "users/" + user.getUsername() + "/" + uniquePrefix + "_" + item.getName();
+            String storedKey = storageProvider.store(storageKey, newContentBytes, item.getContentType() != null ? item.getContentType() : "text/plain");
 
-            Files.write(newDiskPath, newContentBytes);
-
-            item.setDiskPath(newDiskPath.toString());
+            item.setDiskPath(storedKey);
             item.setSize(newSize);
             item.setVersionCount(item.getVersionCount() + 1);
             item.setUpdatedAt(LocalDateTime.now());
@@ -412,7 +392,7 @@ public class FileStorageService {
 
             activityService.log(user, "EDIT", item.getName(), "Saved modified content (v" + saved.getVersionCount() + ")");
             return FileItemDTO.fromEntity(saved);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to write file content", e);
         }
     }
@@ -624,9 +604,7 @@ public class FileStorageService {
             shareLinkRepository.deleteByFileItem(item);
             fileVersionRepository.deleteByFileItem(item);
             if (!item.isDirectory() && StringUtils.hasText(item.getDiskPath())) {
-                try {
-                    Files.deleteIfExists(Paths.get(item.getDiskPath()));
-                } catch (IOException ignored) {}
+                storageProvider.delete(item.getDiskPath());
             }
             fileItemRepository.delete(item);
         }
@@ -685,10 +663,11 @@ public class FileStorageService {
                     zos.putNextEntry(new ZipEntry(entryName + "/"));
                     zos.closeEntry();
                 } else {
-                    Path filePath = Paths.get(item.getDiskPath());
-                    if (Files.exists(filePath)) {
+                    if (storageProvider.exists(item.getDiskPath())) {
                         zos.putNextEntry(new ZipEntry(entryName));
-                        Files.copy(filePath, zos);
+                        try (InputStream is = storageProvider.loadAsStream(item.getDiskPath())) {
+                            is.transferTo(zos);
+                        }
                         zos.closeEntry();
                     }
                 }
@@ -705,10 +684,11 @@ public class FileStorageService {
                     if (item.isTrashed()) continue;
 
                     if (!item.isDirectory()) {
-                        Path filePath = Paths.get(item.getDiskPath());
-                        if (Files.exists(filePath)) {
+                        if (storageProvider.exists(item.getDiskPath())) {
                             zos.putNextEntry(new ZipEntry(item.getName()));
-                            Files.copy(filePath, zos);
+                            try (InputStream is = storageProvider.loadAsStream(item.getDiskPath())) {
+                                is.transferTo(zos);
+                            }
                             zos.closeEntry();
                         }
                     }

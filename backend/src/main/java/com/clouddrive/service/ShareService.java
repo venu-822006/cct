@@ -12,16 +12,13 @@ import com.clouddrive.repository.FileItemRepository;
 import com.clouddrive.repository.ShareLinkRepository;
 import com.clouddrive.repository.UserRepository;
 import com.clouddrive.repository.UserShareRepository;
+import com.clouddrive.storage.StorageProvider;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -36,19 +33,22 @@ public class ShareService {
     private final UserRepository userRepository;
     private final ActivityService activityService;
     private final FileStorageService fileStorageService;
+    private final StorageProvider storageProvider;
 
     public ShareService(ShareLinkRepository shareLinkRepository,
                         FileItemRepository fileItemRepository,
                         UserShareRepository userShareRepository,
                         UserRepository userRepository,
                         ActivityService activityService,
-                        FileStorageService fileStorageService) {
+                        FileStorageService fileStorageService,
+                        StorageProvider storageProvider) {
         this.shareLinkRepository = shareLinkRepository;
         this.fileItemRepository = fileItemRepository;
         this.userShareRepository = userShareRepository;
         this.userRepository = userRepository;
         this.activityService = activityService;
         this.fileStorageService = fileStorageService;
+        this.storageProvider = storageProvider;
     }
 
     private ShareResponseDTO toDTO(ShareLink link) {
@@ -124,18 +124,13 @@ public class ShareService {
         }
 
         FileItem fileItem = link.getFileItem();
-        try {
-            Path filePath = Paths.get(fileItem.getDiskPath()).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                link.setDownloadCount(link.getDownloadCount() + 1);
-                shareLinkRepository.save(link);
-                return resource;
-            } else {
-                throw new RuntimeException("Shared file not found on disk");
-            }
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Invalid file URL", e);
+        Resource resource = storageProvider.loadAsResource(fileItem.getDiskPath());
+        if (resource.exists()) {
+            link.setDownloadCount(link.getDownloadCount() + 1);
+            shareLinkRepository.save(link);
+            return resource;
+        } else {
+            throw new RuntimeException("Shared file not found in storage");
         }
     }
 
@@ -248,16 +243,11 @@ public class ShareService {
             throw new IllegalArgumentException("Permission denied");
         }
 
-        try {
-            Path path = Paths.get(share.getFileItem().getDiskPath()).normalize();
-            Resource resource = new UrlResource(path.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            } else {
-                throw new RuntimeException("File not found on disk");
-            }
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Invalid file URL", e);
+        Resource resource = storageProvider.loadAsResource(share.getFileItem().getDiskPath());
+        if (resource.exists()) {
+            return resource;
+        } else {
+            throw new RuntimeException("File not found in storage");
         }
     }
 }

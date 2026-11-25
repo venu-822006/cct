@@ -21,16 +21,13 @@ public class AuthController {
     private final AuthService authService;
     private final RateLimitingService rateLimitingService;
     private final com.clouddrive.service.RecaptchaService recaptchaService;
-    private final com.clouddrive.service.TurnstileService turnstileService;
 
     public AuthController(AuthService authService,
                           RateLimitingService rateLimitingService,
-                          com.clouddrive.service.RecaptchaService recaptchaService,
-                          com.clouddrive.service.TurnstileService turnstileService) {
+                          com.clouddrive.service.RecaptchaService recaptchaService) {
         this.authService = authService;
         this.rateLimitingService = rateLimitingService;
         this.recaptchaService = recaptchaService;
-        this.turnstileService = turnstileService;
     }
 
     private String getClientIp(HttpServletRequest request) {
@@ -88,16 +85,6 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("success", true, "message", "Google reCAPTCHA verified successfully"));
         } else {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Google reCAPTCHA verification failed. Please try again."));
-        }
-    }
-
-    @PostMapping("/verify-turnstile")
-    public ResponseEntity<?> verifyTurnstile(@RequestBody Map<String, String> body) {
-        String token = body != null ? body.get("turnstileToken") : null;
-        if (turnstileService.verifyToken(token)) {
-            return ResponseEntity.ok(Map.of("success", true, "message", "Cloudflare Turnstile verified successfully"));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Cloudflare Turnstile verification failed. Please try again."));
         }
     }
 

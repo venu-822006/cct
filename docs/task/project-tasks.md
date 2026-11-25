@@ -376,6 +376,32 @@
 - [x] Verified local full-stack run: Spring Boot daemon active on port 8080 and Vite dev server active on port 5173.
 - [x] Verified all test suites pass: 12/12 backend tests (`mvnw.cmd test`, BUILD SUCCESS) and 9/9 frontend tests (`bun test`).
 
+## 33. MinIO S3-Compatible Object Storage Integration
+- [x] Added `io.minio:minio:8.5.12` client dependency to `backend/pom.xml`.
+- [x] Created `StorageProvider` abstraction interface (`com.clouddrive.storage.StorageProvider`) defining uniform file persistence operations: `store`, `loadAsResource`, `loadAsStream`, `delete`, `exists`, and `getProviderType`.
+- [x] Implemented `LocalStorageProvider` for filesystem persistence with directory traversal protection (`SecurityException` on `..` or root escaping).
+- [x] Implemented `MinioResource` extending Spring's `AbstractResource` for streaming, metadata retrieval (`contentLength`), and previewing objects directly from MinIO.
+- [x] Implemented `MinioStorageProvider` with:
+  - Automatic bucket verification and creation on startup (`app.storage.minio.auto-create-bucket: true`).
+  - Safe object key sanitization and uniform hierarchical prefixes (`users/<username>/<uuid>_<filename>`).
+  - Seamless, non-blocking fallback to `LocalStorageProvider` if MinIO server is offline or temporarily unreachable.
+  - Multi-part streaming upload handling and byte array persistence.
+- [x] Implemented `StorageConfig` selecting `MinioStorageProvider` as `@Primary` bean when `app.storage.type=minio` (or `s3`), with clean fallback to `LocalStorageProvider`.
+- [x] Configured MinIO properties in `application.yml` and `application-gcloud.yml` (`MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_AUTO_CREATE_BUCKET`, `MINIO_REGION`).
+- [x] Refactored `FileStorageService.java` to interact exclusively through `StorageProvider`:
+  - Uploading single and multi-file batches.
+  - Creating blank documents.
+  - Loading resources for downloads and inline previews.
+  - In-browser editor content reading and version-snapshotted editing.
+  - Emptying trash and purging storage objects.
+  - Folder and multi-file ZIP streaming (`streamFolderAsZip` and `streamMultipleFilesAsZip`).
+- [x] Refactored `ShareService.java` to load public and internal shared file resources via `StorageProvider`.
+- [x] Updated `docker-compose.yml` with official `minio/minio:latest` service, volume persistence, health checks, and automatic connection to `clouddrive-app`.
+- [x] Added unit and integration tests in `StorageProviderTests.java` covering local storage lifecycle, traversal defense, MinIO key sanitization, and graceful offline fallback.
+- [x] Verified full test suites pass: 17/17 backend tests (`mvn test`, BUILD SUCCESS) and 9/9 frontend tests (`bun test`).
+- [x] Verified production packaging: built `backend/target/personal-cloud-drive.jar` and verified daemon execution on port 8080.
+
+
 
 
 

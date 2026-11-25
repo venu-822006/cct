@@ -1,62 +1,55 @@
-# ===================================================================
-# Google Cloud Build Pipeline for Personal Cloud Drive
-# Free Tier: 120 free build-minutes per day
-# Builds multi-stage Docker container and deploys to Cloud Run Free Tier
-# ===================================================================
 steps:
-  # Step 1: Build Docker container with cache
+  # 1. Build container image using Dockerfile
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-image'
     args:
       - 'build'
       - '-t'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:$COMMIT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:$COMMIT_SHA'
       - '-t'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:latest'
-      - '--cache-from'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:latest'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:latest'
       - '.'
 
-  # Step 2: Push container image to Google Artifact Registry
+  # 2. Push image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-image'
     args:
       - 'push'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:$COMMIT_SHA'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive'
 
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-latest'
-    args:
-      - 'push'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:latest'
-
-  # Step 3: Deploy to Google Cloud Run (Always Free Tier serverless container)
+  # 3. Deploy to Google Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-cloud-run'
-    entrypoint: 'gcloud'
+    entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - '$_SERVICE_NAME'
-      - '--image=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:$COMMIT_SHA'
-      - '--region=$_REGION'
-      - '--platform=managed'
+      - 'cloud-drive'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
       - '--allow-unauthenticated'
-      - '--memory=512Mi'
-      - '--cpu=1'
-      - '--min-instances=0'
-      - '--max-instances=2'
-      - '--port=8080'
-      - '--set-env-vars=SPRING_PROFILES_ACTIVE=gcloud'
-
-substitutions:
-  _REGION: 'us-central1'
-  _REPO_NAME: 'cct-cloud-drive'
-  _SERVICE_NAME: 'cct-cloud-drive'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '5'
+      - '--set-env-vars'
+      - 'SPRING_PROFILES_ACTIVE=gcloud'
 
 images:
-  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:$COMMIT_SHA'
-  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/app:latest'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:$COMMIT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/cloud-drive:latest'
+
+substitutions:
+  _REGION: us-central1
+  _REPO: cloud-drive
 
 options:
   logging: CLOUD_LOGGING_ONLY
