@@ -411,6 +411,17 @@
 - [x] Fixed Grid View folder card title truncation (`P..`) by adjusting responsive columns and collapsing unhovered selection/star action controls.
 - [x] Verified full build & tests: 19/19 backend tests pass (`mvnw.cmd package`, `BUILD SUCCESS`), `npm run build` compiles cleanly, and 9/9 frontend tests pass (`bun test`).
 
+## 35. Trash Lifecycle, Foreign Key Cleanup & Confirmation UX Fixes
+- [x] Fixed `FileStorageService.emptyTrash` foreign-key crash on shared items by deleting `UserShare`, `ShareLink`, and `FileVersion` references and version storage objects (`purgeSingleItem`).
+- [x] Added per-item permanent deletion endpoint `DELETE /api/files/trash/{id}` (`FileController.deletePermanently`) and batch `DELETE_PERMANENTLY` support in `FileStorageService.executeBatchAction`.
+- [x] Hardened `restoreFromTrash`: falls back cleanly to `/` if an item's original parent folder was trashed/deleted, resolves duplicate active filenames automatically (` (restored)`), restores folder subtrees, and syncs `user.usedBytes` on trash/restore/delete.
+- [x] Fixed Trash UI bugs in `src/App.tsx` and `src/services/springApi.ts`:
+  - Ignored Type filter pills inside Trash view and reset `selectedFilter` on switching to Trash so trashed items are never hidden.
+  - Replaced native `window.confirm` with an in-app confirmation modal for Empty Trash, single permanent delete, and batch permanent delete.
+  - Added per-item **Delete permanently** buttons, Trash batch selection actions (**Restore Selected** / **Delete Permanently**), and `.catch(...)` error alerts on Trash/Restore promises.
+- [x] Added `testTrashRestoreDeletePermanentlyAndEmptyWithShares` in `CloudDriveApplicationTests.java` covering `MockMvc` HTTP flows: **20/20 backend tests passing**, `npm run build` clean, **9/9 frontend tests passing**.
+
+
 
 
 

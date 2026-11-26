@@ -86,6 +86,7 @@ import {
   toggleStarItem,
   moveItemToTrash,
   restoreItemFromTrash,
+  deleteItemPermanently,
   emptyTrashPermanently,
   createShareLink,
   fetchMyShares,
@@ -168,6 +169,10 @@ export function App() {
 
   const [colorPickerTarget, setColorPickerTarget] = useState<DriveItem | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [trashConfirm, setTrashConfirm] = useState<
+    { mode: "empty" } | { mode: "single"; item: DriveItem } | { mode: "batch"; count: number } | null
+  >(null);
+  const [trashProcessing, setTrashProcessing] = useState(false);
 
   // Preview Modals
   const [previewMedia, setPreviewMedia] = useState<{
@@ -605,14 +610,7 @@ export function App() {
             <div className="my-1 border-t border-[#e0e2ec]/60 dark:border-[#3c4043]/60" />
 
             <button
-              onClick={() => {
-                setActiveMenuId(null);
-                moveItemToTrash(item.id).then(() => {
-                  notifySuccess(`Moved "${item.name}" to Trash`);
-                  loadCurrentViewData();
-                  loadQuota();
-                });
-              }}
+              onClick={() => handleMoveToTrash(item)}
               className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
             >
               <Trash2 className="w-4 h-4 shrink-0" />
@@ -620,20 +618,25 @@ export function App() {
             </button>
           </>
         ) : (
-          <button
-            onClick={() => {
-              setActiveMenuId(null);
-              restoreItemFromTrash(item.id).then(() => {
-                notifySuccess(`Restored "${item.name}"`);
-                loadCurrentViewData();
-                loadQuota();
-              });
-            }}
-            className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>Restore from Trash</span>
-          </button>
+          <>
+            <button
+              onClick={() => handleRestoreItem(item)}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4 shrink-0" />
+              <span>Restore from Trash</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveMenuId(null);
+                setTrashConfirm({ mode: "single", item });
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 shrink-0" />
+              <span>Delete permanently</span>
+            </button>
+          </>
         )}
       </div>
     );
@@ -689,15 +692,71 @@ export function App() {
   };
 
   // Trash
-  const handleEmptyTrash = async () => {
-    if (!window.confirm("Permanently delete all items in Trash? This cannot be undone.")) return;
+  const handleMoveToTrash = async (item: DriveItem) => {
+    setActiveMenuId(null);
     try {
-      await emptyTrashPermanently();
-      notifySuccess("Trash emptied permanently");
-      loadCurrentViewData();
-      loadQuota();
+      await moveItemToTrash(item.id);
+      notifySuccess(`Moved "${item.name}" to Trash`);
+      await loadCurrentViewData();
+      await loadQuota();
     } catch (err: any) {
-      setErrorAlert(err.message);
+      setErrorAlert(err.message || `Failed to move "${item.name}" to Trash`);
+    }
+  };
+
+  const handleRestoreItem = async (item: DriveItem) => {
+    setActiveMenuId(null);
+    try {
+      await restoreItemFromTrash(item.id);
+      notifySuccess(`Restored "${item.name}"`);
+      await loadCurrentViewData();
+      await loadQuota();
+    } catch (err: any) {
+      setErrorAlert(err.message || `Failed to restore "${item.name}"`);
+    }
+  };
+
+  const handleBatchRestore = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await executeBatchAction(Array.from(selectedIds), "RESTORE");
+      notifySuccess(`Restored ${selectedIds.size} item(s) from Trash`);
+      setSelectedIds(new Set());
+      await loadCurrentViewData();
+      await loadQuota();
+    } catch (err: any) {
+      setErrorAlert(err.message || "Failed to restore selected items");
+    }
+  };
+
+  const handleConfirmTrashDelete = async () => {
+    if (!trashConfirm) return;
+    setTrashProcessing(true);
+    try {
+      if (trashConfirm.mode === "empty") {
+        await emptyTrashPermanently();
+        notifySuccess("Trash emptied permanently");
+        setSelectedIds(new Set());
+      } else if (trashConfirm.mode === "single") {
+        await deleteItemPermanently(trashConfirm.item.id);
+        notifySuccess(`Deleted "${trashConfirm.item.name}" permanently`);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(trashConfirm.item.id);
+          return next;
+        });
+      } else if (trashConfirm.mode === "batch") {
+        await executeBatchAction(Array.from(selectedIds), "DELETE_PERMANENTLY");
+        notifySuccess(`Deleted ${selectedIds.size} item(s) permanently`);
+        setSelectedIds(new Set());
+      }
+      setTrashConfirm(null);
+      await loadCurrentViewData();
+      await loadQuota();
+    } catch (err: any) {
+      setErrorAlert(err.message || "Failed to permanently delete from Trash");
+    } finally {
+      setTrashProcessing(false);
     }
   };
 
@@ -722,7 +781,7 @@ export function App() {
   // Filtering & Sorting
   const filteredItems = (Array.isArray(items) ? items : [])
     .filter((item) => {
-      if (selectedFilter === "all") return true;
+      if (currentView === "trash" || selectedFilter === "all") return true;
       const ext = item.extension.toLowerCase();
       if (selectedFilter === "document") {
         return ["pdf", "doc", "docx", "txt", "md", "csv", "xlsx", "pptx", "rtf"].includes(ext);
@@ -1237,6 +1296,7 @@ export function App() {
               <button
                 onClick={() => {
                   setCurrentView("trash");
+                  setSelectedFilter("all");
                   setSearchQuery("");
                 }}
                 className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
@@ -1372,33 +1432,54 @@ export function App() {
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-1.5 bg-[#c2e7ff] text-[#001d35] dark:bg-[#004a77] dark:text-[#c2e7ff] px-3.5 py-1.5 rounded-full shadow-sm text-xs font-semibold">
                   <span className="mr-1">{selectedIds.size} selected</span>
-                  {selectedIds.size === 1 && (
-                    <button
-                      onClick={() => {
-                        const selectedId = Array.from(selectedIds)[0];
-                        const item = items.find((i) => i.id === selectedId);
-                        if (item) handleOpenUserShare(item);
-                      }}
-                      className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                      title="Share"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
+                  {currentView === "trash" ? (
+                    <>
+                      <button
+                        onClick={handleBatchRestore}
+                        className="p-1 rounded-full hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                        title="Restore Selected"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setTrashConfirm({ mode: "batch", count: selectedIds.size })}
+                        className="p-1 rounded-full hover:bg-red-500/20 text-red-600 dark:text-red-300"
+                        title="Delete Selected Permanently"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {selectedIds.size === 1 && (
+                        <button
+                          onClick={() => {
+                            const selectedId = Array.from(selectedIds)[0];
+                            const item = items.find((i) => i.id === selectedId);
+                            if (item) handleOpenUserShare(item);
+                          }}
+                          className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                          title="Share"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={handleBatchDownloadZip}
+                        className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                        title="Download Selected as ZIP"
+                      >
+                        <FolderDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleBatchTrash}
+                        className="p-1 rounded-full hover:bg-red-500/20 text-red-600 dark:text-red-300"
+                        title="Move Selected to Trash"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
-                  <button
-                    onClick={handleBatchDownloadZip}
-                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                    title="Download Selected as ZIP"
-                  >
-                    <FolderDown className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleBatchTrash}
-                    className="p-1 rounded-full hover:bg-red-500/20 text-red-600 dark:text-red-300"
-                    title="Move Selected to Trash"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                   <button onClick={() => setSelectedIds(new Set())} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -1429,7 +1510,7 @@ export function App() {
 
               {currentView === "trash" && items.length > 0 && (
                 <button
-                  onClick={handleEmptyTrash}
+                  onClick={() => setTrashConfirm({ mode: "empty" })}
                   className="py-1.5 px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1615,7 +1696,7 @@ export function App() {
                                   ? "border-[#0b57d0] dark:border-[#a8c7fa] bg-[#c2e7ff]/30"
                                   : "border-transparent hover:border-[#c2e7ff]/70"
                               } transition-all cursor-pointer shadow-xs`}
-                              onClick={() => handleItemPreviewOrOpen(item)}
+                              onClick={() => (currentView === "trash" ? toggleSelectItem(item.id) : handleItemPreviewOrOpen(item))}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 pr-1 flex-1">
                                 <button
@@ -1675,19 +1756,22 @@ export function App() {
                                     </div>
                                   </>
                                 ) : (
-                                  <button
-                                    onClick={() => {
-                                      restoreItemFromTrash(item.id).then(() => {
-                                        notifySuccess(`Restored "${item.name}"`);
-                                        loadCurrentViewData();
-                                        loadQuota();
-                                      });
-                                    }}
-                                    className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
-                                    title="Restore"
-                                  >
-                                    <RotateCcw className="w-4 h-4" />
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => handleRestoreItem(item)}
+                                      className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
+                                      title="Restore"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setTrashConfirm({ mode: "single", item })}
+                                      className="p-1.5 rounded-lg hover:bg-red-500/15 text-red-500"
+                                      title="Delete permanently"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -1718,7 +1802,7 @@ export function App() {
                                   ? "border-[#0b57d0] dark:border-[#a8c7fa] bg-[#c2e7ff]/25"
                                   : "border-[#e0e2ec] dark:border-[#3c4043] hover:border-[#c2e7ff]"
                               } rounded-2xl transition-all flex flex-col justify-between relative cursor-pointer shadow-xs hover:shadow-md`}
-                              onClick={() => handleItemPreviewOrOpen(item)}
+                              onClick={() => (currentView === "trash" ? toggleSelectItem(item.id) : handleItemPreviewOrOpen(item))}
                             >
                               {/* Top Preview/Thumbnail Area */}
                               <div className="h-32 bg-white/70 dark:bg-black/20 flex items-center justify-center relative p-4 border-b border-[#e0e2ec]/60 dark:border-[#3c4043]/60 rounded-t-2xl overflow-hidden">
@@ -1849,19 +1933,24 @@ export function App() {
                                       </button>
                                     </>
                                   ) : (
-                                    <button
-                                      onClick={() => {
-                                        restoreItemFromTrash(item.id).then(() => {
-                                          notifySuccess(`Restored "${item.name}"`);
-                                          loadCurrentViewData();
-                                          loadQuota();
-                                        });
-                                      }}
-                                      className="p-1 rounded hover:bg-emerald-500/15 text-emerald-500"
-                                      title="Restore"
-                                    >
-                                      <RotateCcw className="w-3.5 h-3.5" />
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => handleRestoreItem(item)}
+                                        className="p-1 rounded hover:bg-emerald-500/15 text-emerald-500 flex items-center gap-1 text-[11px] font-medium px-2"
+                                        title="Restore"
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>Restore</span>
+                                      </button>
+                                      <button
+                                        onClick={() => setTrashConfirm({ mode: "single", item })}
+                                        className="p-1 rounded hover:bg-red-500/15 text-red-500 flex items-center gap-1 text-[11px] font-medium px-2"
+                                        title="Delete permanently"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Delete</span>
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -1904,7 +1993,7 @@ export function App() {
                           className={`hover:bg-[#f0f4f9] dark:hover:bg-[#282a2c] transition-colors cursor-pointer ${
                             selectedIds.has(item.id) ? "bg-[#c2e7ff]/30 dark:bg-[#004a77]/30" : ""
                           }`}
-                          onClick={() => handleItemPreviewOrOpen(item)}
+                          onClick={() => (currentView === "trash" ? toggleSelectItem(item.id) : handleItemPreviewOrOpen(item))}
                         >
                           <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => toggleSelectItem(item.id)}>
@@ -1996,21 +2085,24 @@ export function App() {
                                     {renderThreeDotsMenu(item, true)}
                                   </div>
                                 </>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    restoreItemFromTrash(item.id).then(() => {
-                                      notifySuccess(`Restored "${item.name}"`);
-                                      loadCurrentViewData();
-                                      loadQuota();
-                                    });
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
-                                  title="Restore"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </button>
-                              )}
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => handleRestoreItem(item)}
+                                      className="p-1.5 rounded-lg hover:bg-emerald-500/15 text-emerald-500"
+                                      title="Restore"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setTrashConfirm({ mode: "single", item })}
+                                      className="p-1.5 rounded-lg hover:bg-red-500/15 text-red-500"
+                                      title="Delete permanently"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -2024,6 +2116,52 @@ export function App() {
         </main>
         </div>
       </div>
+
+      {/* MODAL: Trash Permanent Delete / Empty Confirmation */}
+      {trashConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="theme-bg-surface border theme-border rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 text-red-500 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold theme-text-main">
+                {trashConfirm.mode === "empty"
+                  ? "Empty trash?"
+                  : trashConfirm.mode === "batch"
+                  ? `Delete ${trashConfirm.count} items forever?`
+                  : "Delete forever?"}
+              </h3>
+            </div>
+            <p className="text-xs theme-text-sub mb-5 leading-relaxed">
+              {trashConfirm.mode === "empty"
+                ? "All items in Trash will be permanently deleted and cannot be recovered."
+                : trashConfirm.mode === "batch"
+                ? `${trashConfirm.count} selected item(s) will be permanently deleted and cannot be recovered.`
+                : `"${trashConfirm.item.name}" will be permanently deleted and cannot be recovered.`}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={trashProcessing}
+                onClick={() => setTrashConfirm(null)}
+                className="px-4 py-2 theme-bg-subtle hover:theme-bg-hover theme-text-sub text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={trashProcessing}
+                onClick={handleConfirmTrashDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {trashProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Delete permanently</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL: New Folder */}
       {newFolderOpen && (

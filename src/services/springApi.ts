@@ -430,6 +430,12 @@ export async function restoreItemFromTrash(id: number) {
   });
 }
 
+export async function deleteItemPermanently(id: number) {
+  return requestJson<{ message: string }>(`/api/files/trash/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function emptyTrashPermanently() {
   return requestJson<{ message: string }>("/api/files/trash/empty", {
     method: "DELETE",

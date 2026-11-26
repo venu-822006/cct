@@ -313,6 +313,17 @@ public class FileController {
         }
     }
 
+    @DeleteMapping("/trash/{id}")
+    public ResponseEntity<?> deletePermanently(@AuthenticationPrincipal UserDetails userDetails,
+                                               @PathVariable Long id) {
+        try {
+            fileStorageService.deletePermanently(getUser(userDetails), id);
+            return ResponseEntity.ok(Map.of("message", "Item permanently deleted"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/trash/empty")
     public ResponseEntity<?> emptyTrash(@AuthenticationPrincipal UserDetails userDetails) {
         try {

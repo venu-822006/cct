@@ -8,6 +8,7 @@ import com.clouddrive.repository.FileItemRepository;
 import com.clouddrive.repository.FileVersionRepository;
 import com.clouddrive.repository.ShareLinkRepository;
 import com.clouddrive.repository.UserRepository;
+import com.clouddrive.repository.UserShareRepository;
 import com.clouddrive.storage.StorageProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -34,6 +35,7 @@ public class FileStorageService {
     private final FileItemRepository fileItemRepository;
     private final UserRepository userRepository;
     private final ShareLinkRepository shareLinkRepository;
+    private final UserShareRepository userShareRepository;
     private final FileVersionRepository fileVersionRepository;
     private final ActivityService activityService;
     private final StorageProvider storageProvider;
@@ -47,12 +49,14 @@ public class FileStorageService {
     public FileStorageService(FileItemRepository fileItemRepository,
                               UserRepository userRepository,
                               ShareLinkRepository shareLinkRepository,
+                              UserShareRepository userShareRepository,
                               FileVersionRepository fileVersionRepository,
                               ActivityService activityService,
                               StorageProvider storageProvider) {
         this.fileItemRepository = fileItemRepository;
         this.userRepository = userRepository;
         this.shareLinkRepository = shareLinkRepository;
+        this.userShareRepository = userShareRepository;
         this.fileVersionRepository = fileVersionRepository;
         this.activityService = activityService;
         this.storageProvider = storageProvider;
@@ -555,19 +559,72 @@ public class FileStorageService {
         return FileItemDTO.fromEntity(saved);
     }
 
+    private boolean isFolderActive(User user, String folderPath) {
+        if (!StringUtils.hasText(folderPath) || "/".equals(folderPath)) {
+            return true;
+        }
+        int lastSlash = folderPath.lastIndexOf('/');
+        String parent = lastSlash <= 0 ? "/" : folderPath.substring(0, lastSlash);
+        String name = folderPath.substring(lastSlash + 1);
+        return fileItemRepository.findByOwnerAndPathAndNameAndIsTrashedFalse(user, parent, name)
+                .map(FileItem::isDirectory)
+                .orElse(false);
+    }
+
+    private String resolveUniqueRestoredName(User user, String targetPath, String originalName) {
+        if (fileItemRepository.findByOwnerAndPathAndNameAndIsTrashedFalse(user, targetPath, originalName).isEmpty()) {
+            return originalName;
+        }
+        int dotIdx = originalName.lastIndexOf('.');
+        String stem = dotIdx > 0 ? originalName.substring(0, dotIdx) : originalName;
+        String ext = dotIdx > 0 ? originalName.substring(dotIdx) : "";
+        for (int i = 1; i <= 100; i++) {
+            String candidate = stem + " (restored" + (i == 1 ? "" : " " + i) + ")" + ext;
+            if (fileItemRepository.findByOwnerAndPathAndNameAndIsTrashedFalse(user, targetPath, candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        return stem + " (" + UUID.randomUUID().toString().substring(0, 6) + ")" + ext;
+    }
+
+    private void syncUserUsedBytes(User user) {
+        Long newUsed = fileItemRepository.sumUsedBytesByOwner(user);
+        user.setUsedBytes(newUsed != null ? newUsed : 0L);
+        userRepository.save(user);
+    }
+
+    private void purgeSingleItem(FileItem item) {
+        shareLinkRepository.deleteByFileItem(item);
+        userShareRepository.deleteByFileItem(item);
+        List<FileVersion> versions = fileVersionRepository.findByFileItemOrderByVersionNumberDesc(item);
+        for (FileVersion v : versions) {
+            if (StringUtils.hasText(v.getDiskPath()) && !v.getDiskPath().equals(item.getDiskPath())) {
+                storageProvider.delete(v.getDiskPath());
+            }
+        }
+        fileVersionRepository.deleteByFileItem(item);
+        if (!item.isDirectory() && StringUtils.hasText(item.getDiskPath())) {
+            storageProvider.delete(item.getDiskPath());
+        }
+        fileItemRepository.delete(item);
+    }
+
     @Transactional
     public void moveToTrash(User user, Long fileId) {
         FileItem item = getFileItem(user, fileId);
-        item.setTrashed(true);
-        item.setOriginalPath(item.getPath());
-        item.setTrashedAt(LocalDateTime.now());
-        fileItemRepository.save(item);
+        if (!item.isTrashed()) {
+            item.setTrashed(true);
+            item.setOriginalPath(item.getPath());
+            item.setTrashedAt(LocalDateTime.now());
+            item.setUpdatedAt(LocalDateTime.now());
+            fileItemRepository.save(item);
+        }
 
         if (item.isDirectory()) {
             String folderVirtualPath = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + item.getName();
             List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
             for (FileItem d : descendants) {
-                if (d.getPath().equals(folderVirtualPath) || d.getPath().startsWith(folderVirtualPath + "/")) {
+                if (!d.isTrashed() && (d.getPath().equals(folderVirtualPath) || d.getPath().startsWith(folderVirtualPath + "/"))) {
                     d.setTrashed(true);
                     d.setOriginalPath(d.getPath());
                     d.setTrashedAt(LocalDateTime.now());
@@ -576,6 +633,7 @@ public class FileStorageService {
             }
         }
 
+        syncUserUsedBytes(user);
         activityService.log(user, "TRASH", item.getName(), "Moved to Recycle Bin");
     }
 
@@ -583,45 +641,69 @@ public class FileStorageService {
     public void restoreFromTrash(User user, Long fileId) {
         FileItem item = fileItemRepository.findByIdAndOwner(fileId, user)
                 .orElseThrow(() -> new IllegalArgumentException("File not found"));
+
+        String oldSubtreePrefix = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + item.getName();
+
+        // Fallback to "/" if the original parent folder no longer exists or is still in Trash
+        String requestedPath = StringUtils.hasText(item.getOriginalPath()) ? item.getOriginalPath() : "/";
+        String targetPath = isFolderActive(user, requestedPath) ? requestedPath : "/";
+        String restoredName = resolveUniqueRestoredName(user, targetPath, item.getName());
+
         item.setTrashed(false);
-        if (StringUtils.hasText(item.getOriginalPath())) {
-            item.setPath(item.getOriginalPath());
-        }
+        item.setPath(targetPath);
+        item.setName(restoredName);
         item.setTrashedAt(null);
+        item.setUpdatedAt(LocalDateTime.now());
         fileItemRepository.save(item);
+
+        if (item.isDirectory()) {
+            String newSubtreePrefix = (targetPath.equals("/") ? "" : targetPath) + "/" + restoredName;
+            List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, oldSubtreePrefix);
+            for (FileItem d : descendants) {
+                if (d.getPath().equals(oldSubtreePrefix) || d.getPath().startsWith(oldSubtreePrefix + "/")) {
+                    String suffix = d.getPath().substring(oldSubtreePrefix.length());
+                    d.setTrashed(false);
+                    d.setPath(newSubtreePrefix + suffix);
+                    d.setTrashedAt(null);
+                    d.setUpdatedAt(LocalDateTime.now());
+                    fileItemRepository.save(d);
+                }
+            }
+        }
+
+        syncUserUsedBytes(user);
+        activityService.log(user, "RESTORE", item.getName(), "Restored from Recycle Bin to " + targetPath);
+    }
+
+    @Transactional
+    public void deletePermanently(User user, Long fileId) {
+        FileItem item = fileItemRepository.findByIdAndOwner(fileId, user)
+                .orElseThrow(() -> new IllegalArgumentException("File not found"));
 
         if (item.isDirectory()) {
             String folderVirtualPath = (item.getPath().equals("/") ? "" : item.getPath()) + "/" + item.getName();
             List<FileItem> descendants = fileItemRepository.findByOwnerAndPathStartingWith(user, folderVirtualPath);
             for (FileItem d : descendants) {
                 if (d.getPath().equals(folderVirtualPath) || d.getPath().startsWith(folderVirtualPath + "/")) {
-                    d.setTrashed(false);
-                    if (StringUtils.hasText(d.getOriginalPath())) {
-                        d.setPath(d.getOriginalPath());
-                    }
-                    d.setTrashedAt(null);
-                    fileItemRepository.save(d);
+                    purgeSingleItem(d);
                 }
             }
         }
 
-        activityService.log(user, "RESTORE", item.getName(), "Restored from Recycle Bin");
+        String name = item.getName();
+        purgeSingleItem(item);
+        syncUserUsedBytes(user);
+
+        activityService.log(user, "DELETE_PERMANENTLY", name, "Deleted permanently from Trash");
     }
 
     @Transactional
     public void emptyTrash(User user) {
         List<FileItem> trashed = fileItemRepository.findByOwnerAndIsTrashedTrueOrderByTrashedAtDesc(user);
         for (FileItem item : trashed) {
-            shareLinkRepository.deleteByFileItem(item);
-            fileVersionRepository.deleteByFileItem(item);
-            if (!item.isDirectory() && StringUtils.hasText(item.getDiskPath())) {
-                storageProvider.delete(item.getDiskPath());
-            }
-            fileItemRepository.delete(item);
+            purgeSingleItem(item);
         }
-        Long newUsed = fileItemRepository.sumUsedBytesByOwner(user);
-        user.setUsedBytes(newUsed != null ? newUsed : 0L);
-        userRepository.save(user);
+        syncUserUsedBytes(user);
 
         activityService.log(user, "EMPTY_TRASH", "Recycle Bin", "Emptied trash permanently");
     }
@@ -644,6 +726,8 @@ public class FileStorageService {
                     fileItemRepository.save(item);
                 } else if ("RESTORE".equalsIgnoreCase(request.getAction())) {
                     restoreFromTrash(user, id);
+                } else if ("DELETE_PERMANENTLY".equalsIgnoreCase(request.getAction())) {
+                    deletePermanently(user, id);
                 } else if ("MOVE".equalsIgnoreCase(request.getAction()) && request.getTargetPath() != null) {
                     move(user, id, request.getTargetPath());
                 }

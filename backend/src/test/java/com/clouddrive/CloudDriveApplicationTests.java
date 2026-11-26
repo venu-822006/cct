@@ -20,7 +20,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -526,5 +528,75 @@ class CloudDriveApplicationTests {
         mockMvc.perform(get("/api/files/viewer/" + uploaded.get(0).getId())
                         .header("Authorization", "Bearer " + u2Auth.getToken()))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testTrashRestoreDeletePermanentlyAndEmptyWithShares() throws Exception {
+        String u1 = "trashowner_" + uid();
+        String u2 = "trashguest_" + uid();
+
+        RegisterRequest r1 = new RegisterRequest();
+        r1.setUsername(u1);
+        r1.setEmail(u1 + "@test.com");
+        r1.setPassword("pass1234");
+        AuthResponse ownerAuth = authService.register(r1);
+
+        RegisterRequest r2 = new RegisterRequest();
+        r2.setUsername(u2);
+        r2.setEmail(u2 + "@test.com");
+        r2.setPassword("pass1234");
+        authService.register(r2);
+
+        User owner = authService.getUserByUsername(u1);
+        String jwt = ownerAuth.getToken();
+
+        // 1. Create folder + nested file, plus shared file with version & public link
+        FileItemDTO folder = fileStorageService.createFolder(owner, "/", "TempDir");
+        FileItemDTO nested = fileStorageService.createBlankFile(owner, "/TempDir", "nested.txt", "Nested body");
+        FileItemDTO sharedFile = fileStorageService.createBlankFile(owner, "/", "shared_notes.txt", "v1 content");
+        fileStorageService.saveFileContent(owner, sharedFile.getId(), "v2 content");
+
+        ShareRequest pubReq = new ShareRequest();
+        pubReq.setFileId(sharedFile.getId());
+        shareService.createShareLink(owner, pubReq);
+
+        ShareWithUserRequest userShareReq = new ShareWithUserRequest();
+        userShareReq.setFileId(sharedFile.getId());
+        userShareReq.setTargetUsername(u2);
+        userShareReq.setPermission("VIEW");
+        shareService.shareWithUser(owner, userShareReq);
+
+        // 2. Trash nested file, THEN trash parent folder -> restore nested alone -> must fall back to "/"
+        fileStorageService.moveToTrash(owner, nested.getId());
+        fileStorageService.moveToTrash(owner, folder.getId());
+
+        mockMvc.perform(post("/api/files/trash/restore/" + nested.getId())
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk());
+
+        List<FileItemDTO> rootFiles = fileStorageService.listFiles(owner, "/");
+        assertTrue(rootFiles.stream().anyMatch(f -> f.getId().equals(nested.getId()) && f.getPath().equals("/")),
+                "Restoring file whose parent folder is still trashed must fallback cleanly to /");
+
+        // 3. Trash sharedFile and delete permanently via HTTP DELETE /api/files/trash/{id}
+        mockMvc.perform(delete("/api/files/" + sharedFile.getId())
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/files/trash/" + sharedFile.getId())
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk());
+
+        // 4. Trash nested + empty Trash completely via HTTP DELETE /api/files/trash/empty
+        mockMvc.perform(delete("/api/files/" + nested.getId())
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/files/trash/empty")
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk());
+
+        assertTrue(fileStorageService.listTrash(owner).isEmpty(), "Trash should be completely empty after emptyTrash");
+        assertEquals(0L, fileStorageService.getQuota(owner).getUsedBytes(), "Used bytes must reset to 0");
     }
 }
